@@ -9,7 +9,8 @@ export function createDemoMenuMessages(prefix) {
     introText: [
       '🌸 *OnimaiBaseV3 Multi-Session Menü*',
       '',
-      `Basisbefehle: *${prefix}ping*, *${prefix}menu*, *${prefix}sessions*`,
+      `Basisbefehle: *${prefix}ping*, *${prefix}about*, *${prefix}plugins*, *${prefix}session-info*`,
+      `Weitere Helfer: *${prefix}menu* und *${prefix}sessions*`,
       `Lifecycle: *${prefix}session-start <id>* oder *${prefix}session-pair <id> <nummer>*`,
       'Du bekommst unten zwei Buttons, ein kleines Menü und weiter einen simplen Fallback.'
     ].join('\n'),

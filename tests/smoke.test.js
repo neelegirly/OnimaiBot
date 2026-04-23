@@ -17,8 +17,11 @@ test('lädt Commands, Komponenten und Events im Dry-Run', async () => {
   await bot.init();
 
   assert.equal(bot.client.commands.has('ping'), true);
+  assert.equal(bot.client.commands.has('about'), true);
   assert.equal(bot.client.commands.has('menu'), true);
+  assert.equal(bot.client.commands.has('plugins'), true);
   assert.equal(bot.client.commands.has('sessions'), true);
+  assert.equal(bot.client.commands.has('session-info'), true);
   assert.equal(bot.client.commands.has('session-start'), true);
   assert.equal(bot.client.buttons.size >= 2, true);
   assert.equal(bot.client.menus.size >= 1, true);
@@ -48,6 +51,8 @@ test('menu Command baut WhatsApp-Demo und merkt das Fallback-Menü', async () =>
 
   assert.equal(sentPayloads.length, 4);
   assert.equal(typeof sentPayloads[0], 'string');
+  assert.match(sentPayloads[0], /about/i);
+  assert.match(sentPayloads[0], /plugins/i);
   assert.match(sentPayloads[0], /session-start/i);
   assert.equal(sentPayloads[1].buttons.length, 2);
   assert.equal(sentPayloads[2].sections.length, 1);

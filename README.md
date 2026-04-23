@@ -1,90 +1,155 @@
-# OnimaiBaseV3
+<p align="center">
+  <a href="./docs/assets/onimaibot-preview.jpg">
+    <img src="./docs/assets/onimaibot-preview.jpg" alt="OnimaiBot Preview" width="260" />
+  </a>
+</p>
 
-`OnimaiBaseV3` ist jetzt bewusst **einfacher und schöner** aufgebaut: mit einer offiziellen `main.js`, einer hübschen Start-Konsole und einem klaren Command-Ordner namens `Onicommands`.
+<h1 align="center">OnimaiBot</h1>
 
-Direkt enthalten sind:
+<p align="center">
+  Eine schöne, einfache und direkt startbare <strong>WhatsApp-Bot-Base</strong><br />
+  mit <strong>OnimaiBaseV3</strong>, <strong>main.js</strong>, <strong>Onicommands</strong> und einer hübschen Konsole.
+</p>
 
-- offizielle `main.js` als Startpunkt
-- schicke Konsole beim Start
-- einfache WhatsApp-Beispiel-Commands
-- Demo-Buttons und Mini-Menü mit Fallback
+<p align="center">
+  <a href="./docs/assets/onimaibot-preview.jpg"><strong>Bild in groß öffnen</strong></a>
+</p>
+
+<p align="center">
+  <img alt="Node 20+" src="https://img.shields.io/badge/Node-20%2B-1f6feb?style=for-the-badge&logo=node.js&logoColor=white" />
+  <img alt="WhatsApp Bot" src="https://img.shields.io/badge/WhatsApp-Bot-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" />
+  <img alt="PM2 Ready" src="https://img.shields.io/badge/PM2-ready-6d28d9?style=for-the-badge" />
+  <img alt="Starter Friendly" src="https://img.shields.io/badge/Starter-friendly-f59e0b?style=for-the-badge" />
+</p>
+
+---
+
+## Warum dieses Repo?
+
+`OnimaiBot` soll nicht überladen sein, sondern **schön aussehen**, **leicht zu verstehen** sein und **direkt funktionieren**.
+
+Du bekommst hier eine Base, die schon fertig vorbereitet ist für:
+
+- WhatsApp-Bot mit Baileys
+- klare Ordnerstruktur
+- offizielle `main.js` als Einstieg
+- einfacher Command-Ordner `Onicommands/`
+- schöne Konsolen-Ausgabe beim Start
+- Buttons, Menü und Fallback-Demo
 - `.env`-Support
-- Logging und Error-Handling
-- PM2-Konfiguration
-- Dry-Run-Modus zum sicheren Testen ohne Live-Verbindung
+- PM2-Start
+- Dry-Run für sicheres lokales Testen
 
-## Voraussetzungen
+---
 
-- Node.js `>= 20.11`
-- ein WhatsApp-Konto zum Scannen des QR-Codes
+## Features im Überblick
 
-## Installation
+| Bereich | Enthalten |
+|---|---|
+| Einstieg | `main.js` |
+| Commands | `Onicommands/` |
+| Interaktionen | Buttons + Menü + Text-Fallback |
+| Start-Konsole | Banner + Statusbox |
+| Config | `.env`, `config/` |
+| Logs | `logs/` |
+| Prozessmanager | PM2 |
+| Tests | Smoke-Test inklusive |
 
-1. In den Ordner `OnimaiBaseV3/` wechseln
-2. Abhängigkeiten installieren
-3. `.env` prüfen
+---
 
-Typischer Ablauf:
+## Schnellstart 🚀
 
-- `npm install`
-- `.env` prüfen
-- `npm start`
+### 1. Projekt klonen oder herunterladen
 
-## .env einrichten
+```bash
+git clone <DEIN-REPO-LINK> OnimaiBot
+cd OnimaiBot
+```
 
-Die Datei `.env` ist bereits vorhanden. Standardmäßig startet das Projekt im sicheren Dry-Run-Modus.
+Oder einfach als ZIP herunterladen und entpacken.
 
-Wichtige Variablen:
+### 2. Abhängigkeiten installieren
 
-- `BOT_PREFIX` – Prefix für Text-Commands, Standard `!`
-- `WHATSAPP_SESSION_DIR` – Ordner für die Session-Dateien, Standard `auth`
-- `WHATSAPP_PRINT_QR` – QR-Code im Terminal anzeigen
-- `ONIMAIBASEV3_DRY_RUN` – `true` für lokalen Test ohne WhatsApp-Verbindung, `false` für echten Login
+```bash
+npm install
+```
 
-Beispiel:
+### 3. `.env` anlegen
 
-- `ONIMAIBASEV3_DRY_RUN=true` → prüft Loader, Commands und Komponenten ohne Verbindung
-- `ONIMAIBASEV3_DRY_RUN=false` → erzeugt beim Start einen QR-Code für WhatsApp
+```bash
+cp .env.example .env
+```
 
-## Lokal starten
+### 4. Für echten WhatsApp-Login Dry-Run deaktivieren
 
-### Entwicklungsmodus
+Öffne `.env` und setze:
 
-- `npm run dev`
+```env
+ONIMAIBASEV3_DRY_RUN=false
+```
 
-### Normaler Start
+### 5. Bot starten
 
-- `npm start`
+```bash
+npm start
+```
 
-### Validieren / Build-Check
+Danach erscheint im Live-Modus ein QR-Code im Terminal, den du mit WhatsApp scannen kannst.
 
-- `npm run build`
-- `npm test`
+---
 
-## PM2 starten
+## Noch schneller testen
 
-Die PM2-App heißt überall konsistent **OnimaiBaseV3**.
+Wenn du erstmal **nur prüfen willst, ob alles korrekt bootet**, lass in der `.env` einfach diesen Wert aktiv:
 
-- `npm run pm2:start`
-- `npm run pm2:restart`
-- `npm run pm2:stop`
+```env
+ONIMAIBASEV3_DRY_RUN=true
+```
 
-Vor dem PM2-Start solltest du `ONIMAIBASEV3_DRY_RUN=false` setzen, damit der Bot wirklich mit WhatsApp verbindet.
+Dann kannst du direkt testen mit:
+
+```bash
+npm run build
+npm test
+npm start
+```
+
+In diesem Modus wird **keine echte WhatsApp-Verbindung** aufgebaut.
+
+---
+
+## Wichtige `.env`-Werte
+
+| Variable | Bedeutung |
+|---|---|
+| `APP_NAME` | Anzeigename der App |
+| `NODE_ENV` | Umgebung, z. B. `development` oder `production` |
+| `LOG_LEVEL` | z. B. `info`, `warn`, `error` |
+| `BOT_PREFIX` | Prefix für Text-Commands, Standard `!` |
+| `WHATSAPP_SESSION_DIR` | Ordner für Session-Dateien |
+| `WHATSAPP_PRINT_QR` | QR-Code im Terminal anzeigen |
+| `ONIMAIBASEV3_DRY_RUN` | Trockentest ohne Live-Login |
+
+---
 
 ## Projektstruktur
 
 ```text
-OnimaiBaseV3/
+OnimaiBot/
 ├── Onicommands/
+│   ├── menu.js
+│   └── ping.js
 ├── components/
 │   ├── buttons/
 │   └── menus/
 ├── config/
 ├── core/
+├── docs/
+│   └── assets/
+│       └── onimaibot-preview.jpg
 ├── events/
 ├── handlers/
 ├── logs/
-├── main.js
 ├── scripts/
 ├── tests/
 ├── utils/
@@ -94,38 +159,49 @@ OnimaiBaseV3/
 ├── ecosystem.config.cjs
 ├── index.js
 ├── jsconfig.json
-└── package.json
+├── main.js
+├── package.json
+└── package-lock.json
 ```
 
-## Wo liegt was?
+---
 
-- `main.js` – offizieller Einstieg und Startkonsole
-- `Onicommands/` – einfache Beispiel-Commands wie `!ping` und `!menu`
-- `events/` – WhatsApp-Verbindungs- und Nachrichten-Events
-- `handlers/` – Loader für Commands, Komponenten und Events
-- `components/buttons/` – Aktionen für Button-Klicks
-- `components/menus/` – Aktionen für Listen-/Menü-Auswahl
-- `config/` – Laufzeit-Konfiguration und `.env`-Parsing
-- `utils/` – Hilfsfunktionen für Logger, Fehler und WhatsApp-Nachrichten
-- `core/` – zentrale Bot-Klasse und Startlogik
+## Was liegt wo?
 
-## Demo direkt ausprobieren
+- `main.js` → offizieller Einstiegspunkt
+- `index.js` → kleiner Weiterleiter für Kompatibilität
+- `Onicommands/` → einfache Beispiel-Commands
+- `events/` → WhatsApp-Verbindung und Nachrichtenverarbeitung
+- `components/` → Buttons und Menü-Handler
+- `config/` → App- und Env-Konfiguration
+- `utils/` → Logger, WhatsApp-Helfer, Fehler-Utilities
+- `tests/` → Smoke-Test für die Base
+- `docs/assets/` → Bilder und GitHub-Assets
 
-1. `.env` auf `ONIMAIBASEV3_DRY_RUN=false` setzen
-2. `npm start`
-3. QR-Code mit WhatsApp scannen
-4. dem Bot schreiben:
+---
+
+## Beispiel-Commands
+
+Nach erfolgreichem Start kannst du dem Bot schreiben:
 
 - `!ping`
 - `!menu`
 
-`!menu` zeigt:
+### `!ping`
 
-- native WhatsApp-Buttons
-- ein natives Menü / List Message
-- zusätzlich ein Text-Fallback mit `1`, `2`, `3`
+Gibt einen schnellen Status zurück.
 
-So bleibt die Base erstmal bewusst klein und leicht verständlich.
+### `!menu`
+
+Zeigt:
+
+- zwei Buttons
+- ein kleines Menü
+- einen Fallback per `1`, `2`, `3`
+
+So bleibt die Base einsteigerfreundlich und funktioniert auch dann noch gut, wenn ein Client keine nativen Interaktionen perfekt darstellt.
+
+---
 
 ## Eigene Commands hinzufügen
 
@@ -137,37 +213,90 @@ export default {
   aliases: [],
   description: 'Sagt hallo',
   async execute({ reply }) {
-    await reply('Hallo aus OnimaiBaseV3!');
+    await reply('Hallo aus OnimaiBot!');
   }
 };
 ```
 
-## Eigene Buttons oder Menüs hinzufügen
+---
 
-1. `customId` definieren
-2. Datei in `components/buttons/` oder `components/menus/` anlegen
-3. dort `customId` und `execute()` exportieren
-4. die ID in einer gesendeten WhatsApp-Interaktion verwenden
+## PM2 Start
+
+Die App ist direkt für PM2 vorbereitet.
+
+```bash
+npm run pm2:start
+npm run pm2:restart
+npm run pm2:stop
+```
+
+PM2-App-Name:
+
+```text
+OnimaiBaseV3
+```
+
+---
+
+## Entwicklung & Qualität
+
+Zum Prüfen der Base:
+
+```bash
+npm run build
+npm test
+```
+
+Die Base wurde bewusst so gebaut, dass sie:
+
+- schnell verständlich ist
+- sauber strukturiert ist
+- leicht erweitert werden kann
+- für Einsteiger nicht unnötig kompliziert wirkt
+
+---
 
 ## Sicherheit
 
-- Keine Secrets im Code hardcoden
-- Session-Dateien liegen lokal im Ordner `auth/`
+- Keine Tokens oder Secrets im Code speichern
+- Session-Dateien landen lokal im Ordner `auth/`
 - `.env` ist in `.gitignore`
-- Logs landen im Ordner `logs/`
+- Bei Problemen kannst du den Session-Ordner löschen und neu scannen
 
-## Hinweise für Einsteiger
+---
 
-- Der Dry-Run ist ideal, um Struktur und Loader ohne echte Verbindung zu prüfen
-- Für eine frische Session bei Problemen den Ordner `auth/` löschen und neu scannen
-- Die Demo verwendet zusätzlich Text-Fallbacks, damit die Base stabil bleibt
+## Troubleshooting
 
-## Offizieller Startpunkt
+### Kein QR-Code erscheint?
 
-Der Bot startet jetzt offiziell über:
+- prüfe, ob `ONIMAIBASEV3_DRY_RUN=false` gesetzt ist
+- prüfe, ob `WHATSAPP_PRINT_QR=true` gesetzt ist
+- starte den Bot danach neu
 
-- `main.js`
+### Bot verbindet nicht sauber?
 
-`index.js` ist nur noch ein kleiner Weiterleiter für Kompatibilität.
+- lösche testweise den Ordner `auth/`
+- starte den Bot erneut
+- scanne den QR-Code neu
 
-Viel Spaß beim Weiterbauen – die Base ist bewusst leichtgewichtig, damit man sie später unkompliziert erweitern kann.
+### Nur Boot testen?
+
+- `ONIMAIBASEV3_DRY_RUN=true` setzen
+
+---
+
+## Für GitHub schön vorbereitet
+
+Diese README ist so aufgebaut, dass Besucher direkt sehen:
+
+- was das Projekt ist
+- wie man es installiert
+- wie man es startet
+- wo die wichtigsten Dateien liegen
+- wie die ersten Beispiel-Funktionen aussehen
+
+Kurz gesagt: **Repository öffnen, lesen, installieren, loslegen.**
+
+---
+
+Viel Spaß mit `OnimaiBot` 💜

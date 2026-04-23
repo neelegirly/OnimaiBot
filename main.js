@@ -1,0 +1,23 @@
+import { createOnimaiBaseV3Bot } from './core/OnimaiBaseV3Bot.js';
+import { printStartupResult, printWelcomeConsole } from './utils/consoleUi.js';
+
+async function main() {
+  const bot = await createOnimaiBaseV3Bot();
+
+  printWelcomeConsole(bot.config);
+
+  const result = await bot.start();
+
+  printStartupResult(bot, result);
+
+  if (result?.dryRun) {
+    bot.logger.info('Dry-Run beendet. Setze ONIMAIBASEV3_DRY_RUN=false und starte erneut, um den WhatsApp-QR-Code zu erzeugen.');
+  }
+}
+
+try {
+  await main();
+} catch (error) {
+  console.error('[OnimaiBaseV3] Start fehlgeschlagen:', error);
+  process.exitCode = 1;
+}

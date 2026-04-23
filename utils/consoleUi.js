@@ -14,10 +14,12 @@ function createInfoRows(config) {
     `${chalk.bold('App')}          ${chalk.white(config.appName)}`,
     `${chalk.bold('Modus')}        ${config.whatsapp.dryRun ? chalk.yellow('Dry-Run') : chalk.green('Live')}`,
     `${chalk.bold('Prefix')}       ${chalk.cyan(config.whatsapp.prefix)}`,
+    `${chalk.bold('Stack')}        ${chalk.white('@neelegirly/wa-api')}`,
     `${chalk.bold('Commands')}     ${chalk.white(path.basename(config.paths.commandsDir))}`,
-    `${chalk.bold('Session')}      ${chalk.white(path.basename(config.paths.sessionDir))}`,
+    `${chalk.bold('Sessions')}     ${chalk.white(config.multiSession.sessionRoot)}`,
+    `${chalk.bold('Bootstrap')}    ${chalk.white(config.multiSession.bootstrapSessions.join(', ') || 'keine')}`,
     `${chalk.bold('PM2')}          ${chalk.white('OnimaiBaseV3')}`,
-    `${chalk.bold('Beispiele')}    ${chalk.white(`${config.whatsapp.prefix}ping, ${config.whatsapp.prefix}menu`)}`
+    `${chalk.bold('Beispiele')}    ${chalk.white(`${config.whatsapp.prefix}ping, ${config.whatsapp.prefix}menu, ${config.whatsapp.prefix}sessions`)}`
   ].join('\n');
 }
 
@@ -46,9 +48,15 @@ export function printStartupResult(bot, result) {
   ];
 
   if (result?.dryRun) {
-    lines.push('', chalk.yellow('Dry-Run ist aktiv. Für echten WhatsApp-Login ONIMAIBASEV3_DRY_RUN=false setzen.'));
+    lines.push('', chalk.yellow('Dry-Run ist aktiv. Für echte wa-api Sessions ONIMAIBASEV3_DRY_RUN=false setzen.'));
   } else {
-    lines.push('', chalk.green('WhatsApp-Socket läuft. Wenn ein QR-Code erscheint, einfach scannen.'));
+    lines.push(
+      `${chalk.bold('Wiederhergestellt')} ${chalk.green(String(result?.restoredCount ?? 0))}`,
+      `${chalk.bold('Gemanagte Sessions')} ${chalk.green(String(result?.managedSessions?.length ?? 0))}`,
+      `${chalk.bold('Bootstrap-Aktionen')} ${chalk.green(String(result?.bootstrappedSessions?.length ?? 0))}`,
+      '',
+      chalk.green('PM2-ready Multi-Session-Basis läuft. QR oder Pairing-Code erscheinen pro Session im Terminal.')
+    );
   }
 
   console.log(

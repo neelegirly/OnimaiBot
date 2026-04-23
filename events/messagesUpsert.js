@@ -1,5 +1,6 @@
 import { formatError } from '../utils/errors.js';
 import {
+  canManageSessions,
   consumeMenuSelection,
   extractInteractiveSelectionId,
   extractTextContent,
@@ -14,19 +15,22 @@ import {
 
 function createMessageContext({ client, config, logger, message, text }) {
   const chatId = getChatId(message);
+  const sessionId = message?.sessionId || 'unknown-session';
 
   return {
     client,
-    socket: client.socket,
+    waApi: client.waApi,
     config,
     logger,
     message,
     text,
+    sessionId,
     chatId,
     senderId: getSenderId(message),
     senderName: getSenderName(message),
-    reply: (payload) => safeReply(client.socket, chatId, payload, message),
-    rememberMenu: (mapping) => rememberMenuSession(client, chatId, mapping)
+    isOwner: canManageSessions(getSenderId(message), config),
+    reply: (payload) => safeReply(client.waApi, sessionId, chatId, payload, message),
+    rememberMenu: (mapping) => rememberMenuSession(client, sessionId, chatId, mapping)
   };
 }
 
@@ -46,82 +50,81 @@ async function dispatchComponent({ client, context, componentId, logger }) {
 }
 
 export default {
-  name: 'messages.upsert',
-  async execute({ client, config, logger }, payload) {
-    for (const message of payload.messages ?? []) {
-      const chatId = getChatId(message);
+  name: 'message.received',
+  async execute({ client, config, logger }, message) {
+    const chatId = getChatId(message);
 
-      try {
-        if (!isUserMessage(message)) {
-          continue;
-        }
+    try {
+      if (!isUserMessage(message)) {
+        return;
+      }
 
-        const text = extractTextContent(message);
-        const interactiveComponentId = extractInteractiveSelectionId(message);
-        const context = createMessageContext({
+      const text = extractTextContent(message);
+      const interactiveComponentId = extractInteractiveSelectionId(message);
+      const context = createMessageContext({
+        client,
+        config,
+        logger,
+        message,
+        text
+      });
+
+      if (interactiveComponentId) {
+        await dispatchComponent({
           client,
-          config,
-          logger,
-          message,
-          text
+          context,
+          componentId: interactiveComponentId,
+          logger
         });
+        return;
+      }
 
-        if (interactiveComponentId) {
-          await dispatchComponent({
-            client,
-            context,
-            componentId: interactiveComponentId,
-            logger
-          });
-          continue;
-        }
+      if (!text) {
+        return;
+      }
 
-        if (!text) {
-          continue;
-        }
+      const fallbackComponentId = consumeMenuSelection(client, context.sessionId, chatId, text);
 
-        const fallbackComponentId = consumeMenuSelection(client, chatId, text);
-
-        if (fallbackComponentId) {
-          await dispatchComponent({
-            client,
-            context,
-            componentId: fallbackComponentId,
-            logger
-          });
-          continue;
-        }
-
-        const commandInput = parseCommand(text, config.whatsapp.prefix);
-
-        if (!commandInput) {
-          continue;
-        }
-
-        const command = client.commands.get(commandInput.name) || client.commandAliases.get(commandInput.name);
-
-        if (!command) {
-          await context.reply(`❓ Unbekannter Command: *${commandInput.name}*\nNutze *${config.whatsapp.prefix}menu* für die Demo.`);
-          continue;
-        }
-
-        await command.execute({
-          ...context,
-          commandName: command.name,
-          args: commandInput.args,
-          rawArgs: commandInput.rawArgs
+      if (fallbackComponentId) {
+        await dispatchComponent({
+          client,
+          context,
+          componentId: fallbackComponentId,
+          logger
         });
-      } catch (error) {
-        logger.error('Verarbeitung einer eingehenden Nachricht fehlgeschlagen.', formatError(error));
+        return;
+      }
 
-        if (chatId && client.socket) {
-          await safeReply(
-            client.socket,
-            chatId,
-            '❌ Beim Verarbeiten deiner Nachricht ist ein Fehler aufgetreten.',
-            message
-          ).catch(() => {});
-        }
+      const commandInput = parseCommand(text, config.whatsapp.prefix);
+
+      if (!commandInput) {
+        return;
+      }
+
+      const command = client.commands.get(commandInput.name) || client.commandAliases.get(commandInput.name);
+
+      if (!command) {
+        await context.reply(`❓ Unbekannter Command: *${commandInput.name}*\nNutze *${config.whatsapp.prefix}menu* oder *${config.whatsapp.prefix}sessions*.`);
+        return;
+      }
+
+      await command.execute({
+        ...context,
+        commandName: command.name,
+        args: commandInput.args,
+        rawArgs: commandInput.rawArgs
+      });
+    } catch (error) {
+      logger.error('Verarbeitung einer eingehenden Nachricht fehlgeschlagen.', formatError(error));
+
+      if (chatId) {
+        await safeReply(
+          client.waApi,
+          message?.sessionId || 'unknown-session',
+          chatId,
+          '❌ Beim Verarbeiten deiner Nachricht ist ein Fehler aufgetreten.',
+          message
+        ).catch(() => {});
       }
     }
   }

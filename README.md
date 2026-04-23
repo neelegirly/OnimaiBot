@@ -7,8 +7,8 @@
 <h1 align="center">OnimaiBot</h1>
 
 <p align="center">
-  Eine schöne, einfache und direkt startbare <strong>WhatsApp-Bot-Base</strong><br />
-  mit <strong>OnimaiBaseV3</strong>, <strong>main.js</strong>, <strong>Onicommands</strong> und einer hübschen Konsole.
+  Eine hübsche, schlanke und direkt startbare <strong>WhatsApp Multi-Session Base</strong><br />
+  mit <strong>@neelegirly/wa-api</strong>, <strong>PM2</strong>, <strong>main.js</strong> und <strong>Onicommands</strong>.
 </p>
 
 <p align="center">
@@ -17,96 +17,85 @@
 
 <p align="center">
   <img alt="Node 20+" src="https://img.shields.io/badge/Node-20%2B-1f6feb?style=for-the-badge&logo=node.js&logoColor=white" />
-  <img alt="WhatsApp Bot" src="https://img.shields.io/badge/WhatsApp-Bot-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" />
+  <img alt="wa-api" src="https://img.shields.io/badge/@neelegirly-wa--api-7c3aed?style=for-the-badge" />
+  <img alt="WhatsApp Multi Session" src="https://img.shields.io/badge/WhatsApp-Multi--Session-25D366?style=for-the-badge&logo=whatsapp&logoColor=white" />
   <img alt="PM2 Ready" src="https://img.shields.io/badge/PM2-ready-6d28d9?style=for-the-badge" />
-  <img alt="Starter Friendly" src="https://img.shields.io/badge/Starter-friendly-f59e0b?style=for-the-badge" />
 </p>
 
 ---
 
 ## Warum dieses Repo?
 
-`OnimaiBot` soll nicht überladen sein, sondern **schön aussehen**, **leicht zu verstehen** sein und **direkt funktionieren**.
+`OnimaiBot` soll direkt Spaß machen: sauber, verständlich, PM2-tauglich und bereit für mehrere WhatsApp-Sessions.
 
-Du bekommst hier eine Base, die schon fertig vorbereitet ist für:
+Du bekommst hier eine Basis, die bereits vorbereitet ist für:
 
-- WhatsApp-Bot mit Baileys
-- klare Ordnerstruktur
-- offizielle `main.js` als Einstieg
-- einfacher Command-Ordner `Onicommands/`
-- schöne Konsolen-Ausgabe beim Start
-- Buttons, Menü und Fallback-Demo
-- `.env`-Support
-- PM2-Start
-- Dry-Run für sicheres lokales Testen
+- `@neelegirly/wa-api` Multi-Session Lifecycle
+- `loadSessionsFromStorage()` für PM2-Warm-Restarts
+- QR-Start **und** Pairing-Code-Start
+- hübsche Start-Konsole mit Statusbox
+- einfache `Onicommands/`-Struktur
+- Buttons, Menü und Text-Fallback
+- Dry-Run für sichere lokale Checks
 
 ---
 
-## Features im Überblick
+## Stack
 
-| Bereich | Enthalten |
-|---|---|
-| Einstieg | `main.js` |
-| Commands | `Onicommands/` |
-| Interaktionen | Buttons + Menü + Text-Fallback |
-| Start-Konsole | Banner + Statusbox |
-| Config | `.env`, `config/` |
-| Logs | `logs/` |
-| Prozessmanager | PM2 |
-| Tests | Smoke-Test inklusive |
+| Paket | Version |
+|---|---:|
+| `@neelegirly/wa-api` | `1.8.4` |
+| `@neelegirly/baileys` | `2.2.18` |
+| `@neelegirly/libsignal` | `1.0.28` |
+| `@neelegirly/downloader` | `0.1.65` |
 
 ---
 
 ## Schnellstart 🚀
 
-### 1. Projekt klonen oder herunterladen
-
-```bash
-git clone <DEIN-REPO-LINK> OnimaiBot
-cd OnimaiBot
-```
-
-Oder einfach als ZIP herunterladen und entpacken.
-
-### 2. Abhängigkeiten installieren
+### 1. Installieren
 
 ```bash
 npm install
 ```
 
-### 3. `.env` anlegen
+### 2. `.env` vorbereiten
 
 ```bash
 cp .env.example .env
 ```
 
-### 4. Für echten WhatsApp-Login Dry-Run deaktivieren
-
-Öffne `.env` und setze:
+Empfohlene Startwerte:
 
 ```env
+APP_NAME=OnimaiBaseV3
+BOT_PREFIX=!
+WHATSAPP_PRINT_QR=true
+BOT_OWNER_NUMBERS=
+WA_API_BOOTSTRAP_SESSIONS=main-session
+WA_API_RETRY_LIMIT=10
 ONIMAIBASEV3_DRY_RUN=false
 ```
 
-### 5. Bot starten
+### 3. Bot starten
 
 ```bash
 npm start
 ```
 
-Danach erscheint im Live-Modus ein QR-Code im Terminal, den du mit WhatsApp scannen kannst.
+Wenn `main-session` noch nicht gekoppelt ist, erscheint der QR-Code direkt im Terminal.
 
 ---
 
-## Noch schneller testen
+## Dry-Run
 
-Wenn du erstmal **nur prüfen willst, ob alles korrekt bootet**, lass in der `.env` einfach diesen Wert aktiv:
+Wenn du nur prüfen willst, ob Loader, Commands, Events und Config sauber booten:
 
 ```env
 ONIMAIBASEV3_DRY_RUN=true
 ```
 
-Dann kannst du direkt testen mit:
+Dann kannst du gefahrlos testen mit:
 
 ```bash
 npm run build
@@ -114,7 +103,7 @@ npm test
 npm start
 ```
 
-In diesem Modus wird **keine echte WhatsApp-Verbindung** aufgebaut.
+In diesem Modus wird **keine echte Session** gestartet.
 
 ---
 
@@ -123,106 +112,44 @@ In diesem Modus wird **keine echte WhatsApp-Verbindung** aufgebaut.
 | Variable | Bedeutung |
 |---|---|
 | `APP_NAME` | Anzeigename der App |
-| `NODE_ENV` | Umgebung, z. B. `development` oder `production` |
-| `LOG_LEVEL` | z. B. `info`, `warn`, `error` |
 | `BOT_PREFIX` | Prefix für Text-Commands, Standard `!` |
-| `WHATSAPP_SESSION_DIR` | Ordner für Session-Dateien |
-| `WHATSAPP_PRINT_QR` | QR-Code im Terminal anzeigen |
-| `ONIMAIBASEV3_DRY_RUN` | Trockentest ohne Live-Login |
+| `WHATSAPP_PRINT_QR` | QR-Code bei QR-Start im Terminal anzeigen |
+| `BOT_OWNER_NUMBERS` | Kommagetrennte Liste erlaubter Owner-Nummern ohne `+` |
+| `WA_API_BOOTSTRAP_SESSIONS` | Sessions, die beim Start automatisch hochgezogen werden |
+| `WA_API_RETRY_LIMIT` | Retry-Limit für `startSession()` |
+| `ONIMAIBASEV3_DRY_RUN` | Trockentest ohne echte Session-Starts |
+
+> Wenn `BOT_OWNER_NUMBERS` leer bleibt, dürfen in dieser Starter-Base alle Nutzer die Session-Commands verwenden. Für produktive Nutzung solltest du die Liste setzen.
 
 ---
 
-## Projektstruktur
+## Multi-Session Befehle
 
-```text
-OnimaiBot/
-├── Onicommands/
-│   ├── menu.js
-│   └── ping.js
-├── components/
-│   ├── buttons/
-│   └── menus/
-├── config/
-├── core/
-├── docs/
-│   └── assets/
-│       └── onimaibot-preview.jpg
-├── events/
-├── handlers/
-├── logs/
-├── scripts/
-├── tests/
-├── utils/
-├── .env
-├── .env.example
-├── .gitignore
-├── ecosystem.config.cjs
-├── index.js
-├── jsconfig.json
-├── main.js
-├── package.json
-└── package-lock.json
-```
-
----
-
-## Was liegt wo?
-
-- `main.js` → offizieller Einstiegspunkt
-- `index.js` → kleiner Weiterleiter für Kompatibilität
-- `Onicommands/` → einfache Beispiel-Commands
-- `events/` → WhatsApp-Verbindung und Nachrichtenverarbeitung
-- `components/` → Buttons und Menü-Handler
-- `config/` → App- und Env-Konfiguration
-- `utils/` → Logger, WhatsApp-Helfer, Fehler-Utilities
-- `tests/` → Smoke-Test für die Base
-- `docs/assets/` → Bilder und GitHub-Assets
-
----
-
-## Beispiel-Commands
-
-Nach erfolgreichem Start kannst du dem Bot schreiben:
+Nach dem Start kannst du dem Bot unter anderem schreiben:
 
 - `!ping`
 - `!menu`
+- `!sessions`
+- `!session-start support`
+- `!session-pair sales 491234567890`
+- `!session-pause support`
+- `!session-resume support`
+- `!session-stop support`
+- `!session-delete support`
 
-### `!ping`
+### Pairing-Hinweis
 
-Gibt einen schnellen Status zurück.
+Bei `wa-api` muss die Telefonnummer **direkt beim Pairing-Start** mitgegeben werden. Deshalb erwartet `!session-pair` immer:
 
-### `!menu`
-
-Zeigt:
-
-- zwei Buttons
-- ein kleines Menü
-- einen Fallback per `1`, `2`, `3`
-
-So bleibt die Base einsteigerfreundlich und funktioniert auch dann noch gut, wenn ein Client keine nativen Interaktionen perfekt darstellt.
-
----
-
-## Eigene Commands hinzufügen
-
-Lege eine neue Datei in `Onicommands/` an:
-
-```js
-export default {
-  name: 'hallo',
-  aliases: [],
-  description: 'Sagt hallo',
-  async execute({ reply }) {
-    await reply('Hallo aus OnimaiBot!');
-  }
-};
+```text
+!session-pair <session-id> <telefonnummer>
 ```
 
 ---
 
 ## PM2 Start
 
-Die App ist direkt für PM2 vorbereitet.
+Die Base ist für PM2 vorbereitet. Sessions, deren gewünschter Zustand auf `running` steht, werden beim Neustart wieder aus der Registry geladen.
 
 ```bash
 npm run pm2:start
@@ -236,32 +163,69 @@ PM2-App-Name:
 OnimaiBaseV3
 ```
 
+Standard-Session-Root der wa-api Registry:
+
+```text
+sessions_neelegirly/
+```
+
 ---
 
-## Entwicklung & Qualität
+## Projektstruktur
 
-Zum Prüfen der Base:
+```text
+OnimaiBot/
+├── Onicommands/
+│   ├── menu.js
+│   ├── ping.js
+│   ├── sessions.js
+│   ├── session-start.js
+│   ├── session-pair.js
+│   ├── session-pause.js
+│   ├── session-resume.js
+│   ├── session-stop.js
+│   └── session-delete.js
+├── components/
+├── config/
+├── core/
+├── docs/assets/
+├── events/
+├── handlers/
+├── logs/
+├── scripts/
+├── tests/
+├── utils/
+├── .env.example
+├── ecosystem.config.cjs
+├── main.js
+└── package.json
+```
+
+---
+
+## Was liegt wo?
+
+- `main.js` → offizieller Einstiegspunkt
+- `core/OnimaiBaseV3Bot.js` → Start, Restore, Bootstrap und Runtime
+- `Onicommands/` → Beispiel-Commands inkl. Session-Lifecycle
+- `events/` → wa-api Listener für Nachrichten und Session-Status
+- `utils/multisession.js` → Session-Helfer, Owner-Checks und Formatierung
+- `components/` → Buttons und Menü-Demos
+
+---
+
+## Entwicklung & Checks
 
 ```bash
 npm run build
 npm test
 ```
 
-Die Base wurde bewusst so gebaut, dass sie:
+Die Smoke-Tests prüfen unter anderem:
 
-- schnell verständlich ist
-- sauber strukturiert ist
-- leicht erweitert werden kann
-- für Einsteiger nicht unnötig kompliziert wirkt
-
----
-
-## Sicherheit
-
-- Keine Tokens oder Secrets im Code speichern
-- Session-Dateien landen lokal im Ordner `auth/`
-- `.env` ist in `.gitignore`
-- Bei Problemen kannst du den Session-Ordner löschen und neu scannen
+- Command- und Event-Lader
+- Demo-Menü-Fallback
+- Multi-Session-Utils
 
 ---
 
@@ -269,33 +233,29 @@ Die Base wurde bewusst so gebaut, dass sie:
 
 ### Kein QR-Code erscheint?
 
-- prüfe, ob `ONIMAIBASEV3_DRY_RUN=false` gesetzt ist
-- prüfe, ob `WHATSAPP_PRINT_QR=true` gesetzt ist
-- starte den Bot danach neu
+- `ONIMAIBASEV3_DRY_RUN=false` setzen
+- `WHATSAPP_PRINT_QR=true` prüfen
+- `!session-start <id>` verwenden, falls keine Bootstrap-Session gesetzt ist
 
-### Bot verbindet nicht sauber?
+### Pairing-Code kommt nicht?
 
-- lösche testweise den Ordner `auth/`
-- starte den Bot erneut
-- scanne den QR-Code neu
+- `!session-pair <id> <telefonnummer>` mit vollständiger Nummer nutzen
+- Nummer nur als Ziffern schicken, z. B. `491234567890`
 
-### Nur Boot testen?
+### PM2 startet, aber keine Session kommt hoch?
 
-- `ONIMAIBASEV3_DRY_RUN=true` setzen
+- prüfen, ob die Session zuvor wirklich gestartet war
+- `WA_API_BOOTSTRAP_SESSIONS` kontrollieren
+- `sessions_neelegirly/` nicht versehentlich löschen
 
 ---
 
-## Für GitHub schön vorbereitet
+## Sicherheit
 
-Diese README ist so aufgebaut, dass Besucher direkt sehen:
-
-- was das Projekt ist
-- wie man es installiert
-- wie man es startet
-- wo die wichtigsten Dateien liegen
-- wie die ersten Beispiel-Funktionen aussehen
-
-Kurz gesagt: **Repository öffnen, lesen, installieren, loslegen.**
+- keine Tokens oder Secrets im Code speichern
+- `.env` bleibt lokal
+- Session-Dateien und Registry nicht unbedacht weitergeben
+- für produktive Bots `BOT_OWNER_NUMBERS` setzen
 
 ---
 

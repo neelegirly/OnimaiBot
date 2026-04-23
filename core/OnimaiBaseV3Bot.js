@@ -1,15 +1,27 @@
-import makeWASocket, {
-  Browsers,
-  fetchLatestBaileysVersion,
-  useMultiFileAuthState
-} from '@whiskeysockets/baileys';
-import pino from 'pino';
+import * as waApi from '@neelegirly/wa-api';
 import { createAppConfig } from '../config/app.config.js';
 import { loadCommands } from '../handlers/commandHandler.js';
 import { loadComponents } from '../handlers/componentHandler.js';
 import { bindEvents, loadEventDefinitions } from '../handlers/eventHandler.js';
 import { registerProcessErrorHandlers } from '../utils/errors.js';
 import { createLogger } from '../utils/logger.js';
+import { ensureSessionRunning, getManagedSessions, getSessionStatus } from '../utils/multisession.js';
+
+function toRestoredCount(restored) {
+  if (Array.isArray(restored)) {
+    return restored.length;
+  }
+
+  if (typeof restored === 'number') {
+    return restored;
+  }
+
+  if (!restored) {
+    return 0;
+  }
+
+  return 1;
+}
 
 export class OnimaiBaseV3Bot {
   constructor(config) {
@@ -21,19 +33,24 @@ export class OnimaiBaseV3Bot {
     });
 
     this.client = {
+      waApi,
       commands: new Map(),
       commandAliases: new Map(),
       buttons: new Map(),
       menus: new Map(),
       menuSessions: new Map(),
       events: [],
-      socket: null,
       isReady: false,
+      listenersBound: false,
+      runtime: {
+        restoredCount: 0,
+        bootstrappedSessions: [],
+        updateStatus: null
+      },
       appConfig: config
     };
 
     this.initialized = false;
-    this.reconnecting = false;
   }
 
   async init() {
@@ -61,40 +78,18 @@ export class OnimaiBaseV3Bot {
       logger: this.logger.child('events')
     });
 
-    this.initialized = true;
-    return this;
-  }
-
-  async createSocket() {
-    const { state, saveCreds } = await useMultiFileAuthState(this.config.paths.sessionDir);
-    const { version } = await fetchLatestBaileysVersion();
-
-    const socket = makeWASocket({
-      version,
-      auth: state,
-      browser: Browsers.ubuntu('OnimaiBaseV3'),
-      printQRInTerminal: false,
-      markOnlineOnConnect: false,
-      syncFullHistory: false,
-      shouldSyncHistoryMessage: () => false,
-      logger: pino({ level: 'silent' })
-    });
-
-    socket.ev.on('creds.update', saveCreds);
-
-    this.client.socket = socket;
-
     bindEvents({
       client: this.client,
       config: this.config,
       logger: this.logger.child('events'),
       services: {
-        reconnect: () => this.reconnect(),
-        stop: () => this.stop()
+        getManagedSessions: () => getManagedSessions(this.client),
+        getSessionStatus: (sessionId) => getSessionStatus(this.client, sessionId)
       }
     });
 
-    return socket;
+    this.initialized = true;
+    return this;
   }
 
   async start() {
@@ -105,7 +100,7 @@ export class OnimaiBaseV3Bot {
     }
 
     if (this.config.whatsapp.dryRun) {
-      this.logger.info('Dry-Run aktiv. Registries wurden geladen, aber es wird keine WhatsApp-Verbindung aufgebaut.', {
+      this.logger.info('Dry-Run aktiv. Loader, Session-Registry und Multi-Session-Lifecycle wurden geladen.', {
         commands: this.client.commands.size,
         buttons: this.client.buttons.size,
         menus: this.client.menus.size,
@@ -117,37 +112,53 @@ export class OnimaiBaseV3Bot {
       };
     }
 
-    await this.createSocket();
-    this.logger.info('WhatsApp-Socket wurde initialisiert. Warte auf Verbindung oder QR-Code.');
-
-    return {
-      dryRun: false
-    };
-  }
-
-  async reconnect() {
-    if (this.reconnecting) {
-      return;
+    try {
+      await waApi.checkForUpdates();
+      this.client.runtime.updateStatus = waApi.getUpdateStatus?.() ?? null;
+    } catch (error) {
+      this.logger.warn('Update-Check für @neelegirly/wa-api konnte nicht abgeschlossen werden.', {
+        message: error instanceof Error ? error.message : String(error)
+      });
     }
 
-    this.reconnecting = true;
+    const restored = await waApi.loadSessionsFromStorage();
+    const restoredCount = toRestoredCount(restored);
+    this.client.runtime.restoredCount = restoredCount;
 
-    try {
-      this.logger.warn('WhatsApp-Verbindung wird neu aufgebaut.');
-      await this.createSocket();
-    } finally {
-      this.reconnecting = false;
+    const bootstrappedSessions = [];
+
+    for (const sessionId of this.config.multiSession.bootstrapSessions) {
+      const outcome = await ensureSessionRunning({
+        client: this.client,
+        config: this.config,
+        logger: this.logger.child('bootstrap'),
+        sessionId
+      });
+
+      bootstrappedSessions.push(outcome);
+    }
+
+    this.client.runtime.bootstrappedSessions = bootstrappedSessions;
+
+    const managedSessions = getManagedSessions(this.client);
+    this.client.isReady = true;
+
+    this.logger.info('wa-api Multi-Session-Basis aktiv.', {
+      restoredCount,
+      managedSessions: managedSessions.length,
+      bootstrapSessions: this.config.multiSession.bootstrapSessions
+    });
+
+    return {
+      dryRun: false,
+      restoredCount,
+      bootstrappedSessions,
+      managedSessions
     }
   }
 
   async stop() {
-    try {
-      this.client.socket?.end?.(undefined);
-    } catch (error) {
-      this.logger.warn('WhatsApp-Socket konnte nicht sauber beendet werden.', {
-        message: error instanceof Error ? error.message : String(error)
-      });
-    }
+    this.logger.info('OnimaiBaseV3 beendet. Sessions bleiben für PM2-Warm-Restarts in der wa-api Registry erhalten.');
   }
 }
 

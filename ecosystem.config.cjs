@@ -20,6 +20,9 @@ module.exports = {
         NODE_ENV: 'production',
         BOT_PREFIX: '!',
         WHATSAPP_PRINT_QR: 'true',
+        BOT_OWNER_NUMBERS: '',
+        WA_API_BOOTSTRAP_SESSIONS: 'main-session',
+        WA_API_RETRY_LIMIT: '10',
         ONIMAIBASEV3_DRY_RUN: 'false'
       }
     }

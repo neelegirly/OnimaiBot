@@ -4,11 +4,12 @@ export default {
   customId: DEMO_COMPONENT_IDS.setup,
   async execute({ config, reply }) {
     await reply([
-      '*OnimaiBaseV3 Setup & Struktur*',
+      '*OnimaiBaseV3 Setup & Multi-Session*',
       `• Prefix: ${config.whatsapp.prefix}`,
-      '• Session-Dateien landen lokal im Ordner `auth/`.',
-      '• Für die erste Live-Verbindung `ONIMAIBASEV3_DRY_RUN=false` setzen und neu starten.',
-      '• PM2 startet die App konsistent unter dem Namen `OnimaiBaseV3`.'
+      `• Bootstrap-Sessions: ${config.multiSession.bootstrapSessions.join(', ') || 'keine'}`,
+      '• wa-api speichert Sessions standardmäßig unter `sessions_neelegirly/`.',
+      '• Für den ersten Live-Start `ONIMAIBASEV3_DRY_RUN=false` setzen und neu starten.',
+      '• Pairing-Starts brauchen die Telefonnummer bereits direkt im Startbefehl.'
     ].join('\n'));
   }
 };

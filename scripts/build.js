@@ -8,4 +8,4 @@ const bot = await createOnimaiBaseV3Bot({
 
 await bot.init();
 
-console.log('✅ OnimaiBaseV3 Build-/Validierungsdurchlauf erfolgreich.');
+console.log('✅ OnimaiBaseV3 wa-api Multi-Session Build-/Validierungsdurchlauf erfolgreich.');

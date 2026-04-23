@@ -5,11 +5,11 @@ export default {
   async execute({ reply }) {
     await reply([
       '*OnimaiBaseV3 Details*',
-      '• `Onicommands/` enthält die einfachen Beispiel-Befehle wie `ping` und `menu`.',
-      '• `main.js` ist jetzt der offizielle Startpunkt der Base.',
-      '• `events/` verarbeitet Verbindung und eingehende Nachrichten.',
+      '• `Onicommands/` enthält jetzt auch Multi-Session-Lifecycle-Befehle.',
+      '• `main.js` startet die PM2-ready wa-api Basis und lädt Sessions aus der Registry.',
+      '• `events/` verarbeitet wa-api Listener wie `onMessageReceived` und Session-Statuswechsel.',
       '• `components/buttons/` und `components/menus/` kapseln Interaktionen separat.',
-      '• `config/` und `.env` halten Laufzeitwerte aus dem Code heraus.'
+      '• `config/` und `.env` halten Prefix, Owner-Nummern und Bootstrap-Sessions aus dem Code heraus.'
     ].join('\n'));
   }
 };

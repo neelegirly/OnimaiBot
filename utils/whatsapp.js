@@ -1,3 +1,5 @@
+import { isOwnerNumber } from './multisession.js';
+
 function unwrapMessageContent(content) {
   if (!content) {
     return {};
@@ -92,6 +94,10 @@ export function isUserMessage(message) {
 }
 
 export function parseCommand(text, prefix) {
+  if (!text) {
+    return null;
+  }
+
   if (!text.startsWith(prefix)) {
     return null;
   }
@@ -111,35 +117,44 @@ export function parseCommand(text, prefix) {
   };
 }
 
-export function rememberMenuSession(client, chatId, mapping) {
-  client.menuSessions.set(chatId, {
+function getMenuScopeKey(sessionId, chatId) {
+  return `${sessionId}::${chatId}`;
+}
+
+export function rememberMenuSession(client, sessionId, chatId, mapping) {
+  client.menuSessions.set(getMenuScopeKey(sessionId, chatId), {
     mapping,
     expiresAt: Date.now() + 10 * 60 * 1000
   });
 }
 
-export function consumeMenuSelection(client, chatId, text) {
-  const session = client.menuSessions.get(chatId);
+export function consumeMenuSelection(client, sessionId, chatId, text) {
+  const key = getMenuScopeKey(sessionId, chatId);
+  const session = client.menuSessions.get(key);
 
   if (!session) {
     return null;
   }
 
   if (session.expiresAt < Date.now()) {
-    client.menuSessions.delete(chatId);
+    client.menuSessions.delete(key);
     return null;
   }
 
   const selectedComponentId = session.mapping[String(text).trim()] || null;
 
   if (selectedComponentId) {
-    client.menuSessions.delete(chatId);
+    client.menuSessions.delete(key);
   }
 
   return selectedComponentId;
 }
 
-export async function safeReply(socket, chatId, payload, quotedMessage) {
+export function canManageSessions(senderId, config) {
+  return isOwnerNumber(senderId, config);
+}
+
+export async function safeReply(waApi, sessionId, chatId, payload, quotedMessage) {
   const normalizedPayload = typeof payload === 'string' ? { text: payload } : payload;
-  return socket.sendMessage(chatId, normalizedPayload, quotedMessage ? { quoted: quotedMessage } : {});
+  return waApi.sendMessage(sessionId, chatId, normalizedPayload, quotedMessage ? { quoted: quotedMessage } : undefined);
 }

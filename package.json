@@ -1,7 +1,7 @@
 {
   "name": "onimaibasev3",
   "version": "1.0.0",
-  "description": "Schöne, einfache WhatsApp-Bot-Starter-Base mit main.js, Onicommands und hübscher Konsole.",
+  "description": "PM2-ready Multi-Session WhatsApp Bot Base mit @neelegirly/wa-api, main.js und Onicommands.",
   "private": true,
   "type": "module",
   "main": "main.js",
@@ -18,12 +18,13 @@
     "pm2:restart": "pm2 restart OnimaiBaseV3"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.7.18",
+    "@neelegirly/baileys": "2.2.18",
+    "@neelegirly/downloader": "0.1.65",
+    "@neelegirly/libsignal": "1.0.28",
+    "@neelegirly/wa-api": "1.8.4",
     "boxen": "^8.0.1",
     "chalk": "^5.4.1",
     "dotenv": "^17.2.3",
-    "pino": "^9.7.0",
-    "pm2": "^6.0.8",
-    "qrcode-terminal": "^0.12.0"
+    "pm2": "^6.0.8"
   }
 }

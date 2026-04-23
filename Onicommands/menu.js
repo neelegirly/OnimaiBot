@@ -3,7 +3,7 @@ import { createDemoMenuMessages } from '../components/demoMenuLayout.js';
 export default {
   name: 'menu',
   aliases: ['help', 'hilfe'],
-  description: 'Zeigt die einfachen Beispiel-Funktionen von OnimaiBaseV3.',
+  description: 'Zeigt die Beispiel-Funktionen und Multi-Session-Hinweise von OnimaiBaseV3.',
   async execute({ config, logger, rememberMenu, reply }) {
     const { introText, buttonMessage, listMessage, fallbackText, fallbackMap } = createDemoMenuMessages(config.whatsapp.prefix);
 

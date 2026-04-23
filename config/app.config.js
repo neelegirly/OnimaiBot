@@ -20,18 +20,30 @@ export function createAppConfig(overrides = {}) {
       commandsDir: path.join(projectRoot, 'Onicommands'),
       eventsDir: path.join(projectRoot, 'events'),
       componentsDir: path.join(projectRoot, 'components'),
-      logsDir: path.join(projectRoot, 'logs'),
-      sessionDir: path.join(projectRoot, env.sessionDir)
+      logsDir: path.join(projectRoot, 'logs')
     },
     runtime: {
       nodeEnv: env.nodeEnv,
       logLevel: env.logLevel,
-      missingEnv: missing
+      missingEnv: missing,
+      dryRun: env.dryRun
     },
     whatsapp: {
       prefix: env.botPrefix,
       printQr: env.printQr,
-      dryRun: env.dryRun
+      dryRun: env.dryRun,
+      ownerNumbers: env.ownerNumbers
+    },
+    multiSession: {
+      sessionRoot: 'sessions_neelegirly',
+      bootstrapSessions: env.bootstrapSessions,
+      retryLimit: env.retryLimit,
+      packageStack: {
+        waApi: '1.8.4',
+        baileys: '2.2.18',
+        libsignal: '1.0.28',
+        downloader: '0.1.65'
+      }
     }
   };
 }

@@ -11,7 +11,7 @@ async function main() {
   printStartupResult(bot, result);
 
   if (result?.dryRun) {
-    bot.logger.info('Dry-Run beendet. Setze ONIMAIBASEV3_DRY_RUN=false und starte erneut, um den WhatsApp-QR-Code zu erzeugen.');
+    bot.logger.info('Dry-Run beendet. Setze ONIMAIBASEV3_DRY_RUN=false und starte erneut, damit die wa-api Multi-Session-Basis echte Sessions startet.');
   }
 }
 

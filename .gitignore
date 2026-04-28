@@ -3,5 +3,7 @@ node_modules/
 database.json
 sessions/
 sessions_*/
+logs/*
+!logs/.gitkeep
 *.log
 npm-debug.log*

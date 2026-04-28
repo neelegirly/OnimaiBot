@@ -1,22 +1,30 @@
 {
-  "name": "onimaibot",
-  "version": "1.0.0",
-  "description": "OnimaiBot: PM2-ready Multi-Session WhatsApp Bot Base mit @neelegirly/wa-api, Profiles, Welcome und Onicommands.",
+  "name": "onimaibase-whatsapp",
+  "version": "2.0.0",
+  "description": "OnimaiBase WhatsApp Multi-Session Base mit aktuellem @neelegirly-Stack, Welcome-System, Owner-/Session-Commands und zentraler Onimai.js-Logik.",
   "private": true,
+  "main": "Onimai.js",
   "type": "module",
-  "main": "main.js",
-  "engines": {
-    "node": ">=20.11.0"
-  },
   "scripts": {
-    "start": "node main.js",
-    "dev": "node --watch main.js",
-    "build": "node scripts/build.js",
-    "test": "node --test tests/smoke.test.js",
-    "pm2:start": "pm2 start ecosystem.config.cjs --only OnimaiBot",
-    "pm2:stop": "pm2 delete OnimaiBot",
-    "pm2:restart": "pm2 restart OnimaiBot"
+    "start": "node Onimai.js",
+    "dev": "node --watch Onimai.js",
+    "build": "node --check Onimai.js",
+    "test": "node --test smoke.test.js",
+    "pm2:start": "pm2 start Onimai.js --name OnimaiBase",
+    "pm2:restart": "pm2 restart OnimaiBase",
+    "pm2:stop": "pm2 delete OnimaiBase"
   },
+  "keywords": [
+    "Onimai",
+    "Neelegirly",
+    "WhatsApp",
+    "Baileys",
+    "Multi-Session",
+    "wa-api",
+    "OnimaiBase"
+  ],
+  "author": "Neelegirly",
+  "license": "MIT",
   "dependencies": {
     "@neelegirly/baileys": "2.2.18",
     "@neelegirly/downloader": "0.1.65",
@@ -25,6 +33,13 @@
     "boxen": "^8.0.1",
     "chalk": "^5.4.1",
     "dotenv": "^17.2.3",
+    "lowdb": "^7.0.1",
     "pm2": "^6.0.8"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  },
+  "engines": {
+    "node": ">=20.11.0"
   }
 }

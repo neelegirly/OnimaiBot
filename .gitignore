@@ -1,13 +1,7 @@
 node_modules/
 .env
-auth/
-logs/*.log
-logs/*.txt
-data/runtime-store.json
+database.json
+sessions/
+sessions_*/
+*.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-.DS_Store
-coverage/
-.tmp/

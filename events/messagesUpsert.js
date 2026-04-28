@@ -1,4 +1,13 @@
+import { WAMessageStubType } from '@neelegirly/baileys';
 import { formatError } from '../utils/errors.js';
+import { getGroupMetadataForSession } from '../utils/multisession.js';
+import {
+  extractParticipantJids,
+  formatMentionTag,
+  getGroupWelcomeSettings,
+  renderWelcomeTemplate,
+  touchUserProfile
+} from '../utils/runtimeStore.js';
 import {
   canManageSessions,
   consumeMenuSelection,
@@ -7,6 +16,7 @@ import {
   getChatId,
   getSenderId,
   getSenderName,
+  isGroupChat,
   isUserMessage,
   parseCommand,
   rememberMenuSession,
@@ -34,6 +44,89 @@ function createMessageContext({ client, config, logger, message, text }) {
   };
 }
 
+const WELCOME_STUB_TYPES = new Set([
+  WAMessageStubType.GROUP_PARTICIPANT_ADD,
+  WAMessageStubType.GROUP_PARTICIPANT_INVITE,
+  WAMessageStubType.GROUP_PARTICIPANT_ACCEPT,
+  WAMessageStubType.GROUP_PARTICIPANT_LINKED_GROUP_JOIN,
+  WAMessageStubType.GROUP_PARTICIPANT_JOINED_GROUP_AND_PARENT_GROUP
+].filter((value) => Number.isInteger(value)));
+
+function resolveWelcomeAction(stubType) {
+  if (stubType === WAMessageStubType.GROUP_PARTICIPANT_INVITE) {
+    return 'eingeladen';
+  }
+
+  if (stubType === WAMessageStubType.GROUP_PARTICIPANT_ACCEPT) {
+    return 'akzeptiert und beigetreten';
+  }
+
+  return 'beigetreten';
+}
+
+async function maybeHandleGroupWelcome({ client, config, logger, message, context }) {
+  const stubType = Number(message?.messageStubType || 0);
+
+  if (!context.chatId || !isGroupChat(context.chatId) || !WELCOME_STUB_TYPES.has(stubType)) {
+    return false;
+  }
+
+  const settings = await getGroupWelcomeSettings(config.projectRoot, context.chatId);
+
+  if (!settings.welcomeEnabled) {
+    return false;
+  }
+
+  const participantJids = extractParticipantJids(message?.messageStubParameters || []);
+
+  if (participantJids.length === 0 && context.senderId && context.senderId !== context.chatId) {
+    participantJids.push(context.senderId);
+  }
+
+  if (participantJids.length === 0) {
+    return false;
+  }
+
+  let groupName = context.chatId;
+
+  try {
+    const metadata = await getGroupMetadataForSession(client, context.sessionId, context.chatId);
+    groupName = metadata?.subject || groupName;
+  } catch (error) {
+    logger.warn('Gruppenmetadaten für Welcome konnten nicht geladen werden.', {
+      message: error instanceof Error ? error.message : String(error)
+    });
+  }
+
+  if ((!groupName || groupName === context.chatId) && Array.isArray(message?.messageStubParameters)) {
+    const subjectCandidate = message.messageStubParameters.find((entry) => !String(entry || '').includes('@'));
+    if (subjectCandidate) {
+      groupName = String(subjectCandidate).trim();
+    }
+  }
+
+  const welcomeText = renderWelcomeTemplate(settings.welcomeTemplate, {
+    mentionJids: participantJids,
+    groupName: groupName || 'deiner Gruppe',
+    action: resolveWelcomeAction(stubType),
+    sessionId: context.sessionId
+  });
+
+  try {
+    await client.waApi.sendMessage(context.sessionId, context.chatId, {
+      text: welcomeText,
+      mentions: participantJids
+    });
+    return true;
+  } catch (error) {
+    logger.warn('Welcome-Nachricht konnte nicht gesendet werden.', {
+      message: error instanceof Error ? error.message : String(error),
+      participants: participantJids.map((jid) => formatMentionTag(jid))
+    });
+    return false;
+  }
+}
+
 async function dispatchComponent({ client, context, componentId, logger }) {
   const component = client.buttons.get(componentId) || client.menus.get(componentId);
 
@@ -55,12 +148,7 @@ export default {
     const chatId = getChatId(message);
 
     try {
-      if (!isUserMessage(message)) {
-        return;
-      }
-
       const text = extractTextContent(message);
-      const interactiveComponentId = extractInteractiveSelectionId(message);
       const context = createMessageContext({
         client,
         config,
@@ -68,6 +156,16 @@ export default {
         message,
         text
       });
+
+      if (await maybeHandleGroupWelcome({ client, config, logger, message, context })) {
+        return;
+      }
+
+      if (!isUserMessage(message)) {
+        return;
+      }
+
+      const interactiveComponentId = extractInteractiveSelectionId(message);
 
       if (interactiveComponentId) {
         await dispatchComponent({
@@ -100,6 +198,16 @@ export default {
       if (!commandInput) {
         return;
       }
+
+      await touchUserProfile(config.projectRoot, {
+        senderId: context.senderId,
+        displayName: context.senderName,
+        incrementCommandCount: true
+      }).catch((error) => {
+        logger.warn('Runtime-Profil konnte nicht aktualisiert werden.', {
+          message: error instanceof Error ? error.message : String(error)
+        });
+      });
 
       const command = client.commands.get(commandInput.name) || client.commandAliases.get(commandInput.name);
 

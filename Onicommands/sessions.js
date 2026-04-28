@@ -6,7 +6,7 @@ export default {
   description: 'Listet alle bekannten wa-api Sessions auf.',
   async execute({ client, reply }) {
     await reply([
-      '*OnimaiBaseV3 Sessions*',
+      '*OnimaiBot Sessions*',
       formatManagedSessions(client)
     ].join('\n'));
   }

@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'OnimaiBaseV3',
+      name: 'OnimaiBot',
       script: './main.js',
       cwd: __dirname,
       exec_mode: 'fork',
@@ -17,12 +17,14 @@ module.exports = {
       restart_delay: 3000,
       min_uptime: '10s',
       env: {
+        APP_NAME: 'OnimaiBot',
         NODE_ENV: 'production',
         BOT_PREFIX: '!',
         WHATSAPP_PRINT_QR: 'true',
         BOT_OWNER_NUMBERS: '',
         WA_API_BOOTSTRAP_SESSIONS: 'main-session',
         WA_API_RETRY_LIMIT: '10',
+        ONIMAIBOT_DRY_RUN: 'false',
         ONIMAIBASEV3_DRY_RUN: 'false'
       }
     }

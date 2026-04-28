@@ -10,9 +10,9 @@ export function createAppConfig(overrides = {}) {
   const { env, missing } = loadEnv(overrides);
 
   return {
-    appName: 'OnimaiBaseV3',
-    packageName: 'onimaibasev3',
-    title: 'OnimaiBaseV3',
+    appName: env.appName || 'OnimaiBot',
+    packageName: 'onimaibot',
+    title: env.appName || 'OnimaiBot',
     projectRoot,
     paths: {
       projectRoot,

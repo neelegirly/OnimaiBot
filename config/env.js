@@ -32,8 +32,10 @@ export function loadEnv(overrides = {}) {
     ...overrides
   };
 
+  const dryRunValue = raw.ONIMAIBOT_DRY_RUN ?? raw.ONIMAIBASEV3_DRY_RUN;
+
   const env = {
-    appName: raw.APP_NAME || 'OnimaiBaseV3',
+    appName: raw.APP_NAME || 'OnimaiBot',
     nodeEnv: raw.NODE_ENV || 'development',
     logLevel: raw.LOG_LEVEL || 'info',
     botPrefix: raw.BOT_PREFIX || '!',
@@ -41,7 +43,7 @@ export function loadEnv(overrides = {}) {
     ownerNumbers: parseList(raw.BOT_OWNER_NUMBERS),
     bootstrapSessions: parseList(raw.WA_API_BOOTSTRAP_SESSIONS || 'main-session'),
     retryLimit: parseInteger(raw.WA_API_RETRY_LIMIT, 10),
-    dryRun: parseBoolean(raw.ONIMAIBASEV3_DRY_RUN, true)
+    dryRun: parseBoolean(dryRunValue, true)
   };
 
   return {

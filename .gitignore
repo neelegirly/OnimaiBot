@@ -3,6 +3,7 @@ node_modules/
 auth/
 logs/*.log
 logs/*.txt
+data/runtime-store.json
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

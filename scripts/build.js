@@ -1,11 +1,11 @@
-process.env.ONIMAIBASEV3_DRY_RUN = process.env.ONIMAIBASEV3_DRY_RUN || 'true';
+process.env.ONIMAIBOT_DRY_RUN = process.env.ONIMAIBOT_DRY_RUN || process.env.ONIMAIBASEV3_DRY_RUN || 'true';
 
-const { createOnimaiBaseV3Bot } = await import('../core/OnimaiBaseV3Bot.js');
+const { createOnimaiBot } = await import('../core/OnimaiBaseV3Bot.js');
 
-const bot = await createOnimaiBaseV3Bot({
+const bot = await createOnimaiBot({
   LOG_LEVEL: 'warn'
 });
 
 await bot.init();
 
-console.log('✅ OnimaiBaseV3 wa-api Multi-Session Build-/Validierungsdurchlauf erfolgreich.');
+console.log('✅ OnimaiBot wa-api Multi-Session Build-/Validierungsdurchlauf erfolgreich.');

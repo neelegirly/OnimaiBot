@@ -14,12 +14,12 @@ function createInfoRows(config) {
     `${chalk.bold('App')}          ${chalk.white(config.appName)}`,
     `${chalk.bold('Modus')}        ${config.whatsapp.dryRun ? chalk.yellow('Dry-Run') : chalk.green('Live')}`,
     `${chalk.bold('Prefix')}       ${chalk.cyan(config.whatsapp.prefix)}`,
-    `${chalk.bold('Stack')}        ${chalk.white('@neelegirly/wa-api')}`,
+    `${chalk.bold('Stack')}        ${chalk.white('@neelegirly/wa-api + @neelegirly/baileys')}`,
     `${chalk.bold('Commands')}     ${chalk.white(path.basename(config.paths.commandsDir))}`,
     `${chalk.bold('Sessions')}     ${chalk.white(config.multiSession.sessionRoot)}`,
     `${chalk.bold('Bootstrap')}    ${chalk.white(config.multiSession.bootstrapSessions.join(', ') || 'keine')}`,
-    `${chalk.bold('PM2')}          ${chalk.white('OnimaiBaseV3')}`,
-    `${chalk.bold('Beispiele')}    ${chalk.white(`${config.whatsapp.prefix}ping, ${config.whatsapp.prefix}menu, ${config.whatsapp.prefix}sessions`)}`
+    `${chalk.bold('PM2')}          ${chalk.white(config.appName)}`,
+    `${chalk.bold('Beispiele')}    ${chalk.white(`${config.whatsapp.prefix}ping, ${config.whatsapp.prefix}menu, ${config.whatsapp.prefix}register, ${config.whatsapp.prefix}me`)}`
   ].join('\n');
 }
 
@@ -33,7 +33,7 @@ export function printWelcomeConsole(config) {
       margin: { top: 0, bottom: 1 },
       borderStyle: 'round',
       borderColor: 'cyan',
-      title: ' OnimaiBaseV3 ',
+      title: ` ${config.title} `,
       titleAlignment: 'center'
     })
   );
@@ -48,7 +48,7 @@ export function printStartupResult(bot, result) {
   ];
 
   if (result?.dryRun) {
-    lines.push('', chalk.yellow('Dry-Run ist aktiv. Für echte wa-api Sessions ONIMAIBASEV3_DRY_RUN=false setzen.'));
+    lines.push('', chalk.yellow('Dry-Run ist aktiv. Für echte wa-api Sessions ONIMAIBOT_DRY_RUN=false setzen (legacy: ONIMAIBASEV3_DRY_RUN=false).'));
   } else {
     lines.push(
       `${chalk.bold('Wiederhergestellt')} ${chalk.green(String(result?.restoredCount ?? 0))}`,

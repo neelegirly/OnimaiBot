@@ -36,6 +36,28 @@ export function getSessionStatus(client, sessionId) {
   return client.waApi.getSessionStatus?.(sessionId) || 'unknown';
 }
 
+export function getSessionClient(client, sessionId) {
+  return client?.waApi?.getSession?.(sessionId) || null;
+}
+
+export async function getGroupMetadataForSession(client, sessionId, chatId) {
+  const session = getSessionClient(client, sessionId);
+
+  if (!session || !chatId) {
+    return null;
+  }
+
+  if (typeof session.groupMetadata === 'function') {
+    return session.groupMetadata(chatId);
+  }
+
+  if (typeof session.getGroupMetadata === 'function') {
+    return session.getGroupMetadata(chatId);
+  }
+
+  return null;
+}
+
 export function formatSessionEntry(client, entry) {
   if (typeof entry === 'string') {
     return {

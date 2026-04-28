@@ -55,6 +55,8 @@ Kurz gesagt: **weniger Frust, mehr Startklar.**
 | Sessions | echte Multi-Session mit `@neelegirly/wa-api` |
 | Struktur | `Onicommands`, `events`, `components`, `utils`, `config` |
 | Beispiel-Plugins | zusätzliche Beispiel-Commands direkt im Projekt |
+| Nutzerprofile | `!register`, `!me` und kleine JSON-Runtime-Profile |
+| Gruppenhilfe | `!tagall` plus Welcome-Nachrichten über WhatsApp-Systemmeldungen |
 | Interaktionen | Buttons, Menü und Text-Fallback |
 | Betrieb | PM2-Unterstützung und Registry-Restore |
 | Tests | Smoke-Tests für Loader und Utilities |
@@ -109,14 +111,16 @@ cp .env.example .env
 ### 3. Grundwerte setzen
 
 ```env
-APP_NAME=OnimaiBaseV3
+APP_NAME=OnimaiBot
 BOT_PREFIX=!
 WHATSAPP_PRINT_QR=true
 BOT_OWNER_NUMBERS=
 WA_API_BOOTSTRAP_SESSIONS=main-session
 WA_API_RETRY_LIMIT=10
-ONIMAIBASEV3_DRY_RUN=false
+ONIMAIBOT_DRY_RUN=false
 ```
+
+Legacy-Hinweis: `ONIMAIBASEV3_DRY_RUN` wird weiterhin akzeptiert, falls du ältere Deployments schon im Einsatz hast.
 
 ### 4. Starten
 
@@ -145,7 +149,7 @@ Danach kannst du schon mit Commands arbeiten und den Rest Schritt für Schritt e
 Wenn du erstmal nur prüfen willst, ob alles sauber lädt, ohne echte WhatsApp-Session:
 
 ```env
-ONIMAIBASEV3_DRY_RUN=true
+ONIMAIBOT_DRY_RUN=true
 ```
 
 Dann kannst du sicher testen mit:
@@ -170,7 +174,7 @@ In diesem Modus wird **kein echter Login** aufgebaut.
 | `BOT_OWNER_NUMBERS` | Owner-Nummern, kommasepariert, ohne `+` |
 | `WA_API_BOOTSTRAP_SESSIONS` | Sessions, die beim Start automatisch hochkommen |
 | `WA_API_RETRY_LIMIT` | Retry-Anzahl beim Starten einer Session |
-| `ONIMAIBASEV3_DRY_RUN` | sicherer Testmodus ohne echte Session |
+| `ONIMAIBOT_DRY_RUN` | sicherer Testmodus ohne echte Session |
 
 > Wenn `BOT_OWNER_NUMBERS` leer ist, sind in dieser Starter-Base die Session-Commands offen. Für öffentliche oder produktive Nutzung solltest du diese Liste setzen.
 
@@ -182,9 +186,14 @@ Nach dem Start kannst du direkt mit diesen Befehlen arbeiten:
 
 - `!ping`
 - `!about`
+- `!stats`
 - `!plugins`
+- `!register Neele`
+- `!me`
 - `!session-info`
 - `!menu`
+- `!tagall`
+- `!welcome preview`
 - `!sessions`
 - `!session-start support`
 - `!session-pair sales 491234567890`
@@ -197,20 +206,28 @@ Nach dem Start kannst du direkt mit diesen Befehlen arbeiten:
 
 - `!ping` → schneller Statuscheck
 - `!about` → kurze Projektübersicht mit Neelegirly-Branding
+- `!stats` → Runtime-, Loader- und Stack-Status
 - `!plugins` → zeigt geladene Beispiel-Plugins, Commands und Module
+- `!register` / `!me` → kleines Starter-Profil direkt im Repo
 - `!session-info` → zeigt aktuelle Session, Nutzer und Rechte
 - `!menu` → zeigt die Starter-Demo mit Buttons und Menü
+- `!tagall` → markiert alle Mitglieder in einer WhatsApp-Gruppe
+- `!welcome` → aktiviert, ändert oder testet Welcome-Texte über Gruppen-Systemmeldungen
 - `!sessions` → listet bekannte Sessions
 - `!session-start` → startet oder reaktiviert eine Session per QR
 - `!session-pair` → startet den Pairing-Code-Flow mit Telefonnummer
 
 ### Neue Beispiel-Plugins direkt im Projekt
 
-Damit die Base nicht nur in der README nach „mehr Plugins“ aussieht, sind jetzt direkt im Projekt drei zusätzliche Beispiel-Commands eingebaut:
+Damit die Base nicht nur in der README nach „mehr Plugins“ aussieht, sind jetzt direkt im Projekt mehrere WhatsApp-Beispiele eingebaut:
 
 - `about.js` → einfache Projekt- und Stack-Info
 - `plugins.js` → zeigt geladene Module und Command-Beispiele
 - `session-info.js` → demonstriert sessionbezogene Antworten in einer Multi-Session-Base
+- `register.js` + `me.js` → kleines Runtime-Profil-System als Starter-Beispiel
+- `tagall.js` → einfache Gruppen-Erwähnung für WhatsApp
+- `welcome.js` → Welcome-Steuerung für Gruppenbeitritte
+- `stats.js` + `owner.js` → Runtime/Owner-Hilfe direkt im Chat
 
 Das sind bewusst gute Starter-Beispiele, die man leicht kopieren, umbauen oder erweitern kann.
 
@@ -243,7 +260,7 @@ npm run pm2:stop
 PM2-App-Name:
 
 ```text
-OnimaiBaseV3
+OnimaiBot
 ```
 
 Standard-Session-Root:
@@ -263,10 +280,16 @@ OnimaiBot/
 ├── Onicommands/
 │   ├── about.js
 │   ├── menu.js
+│   ├── me.js
+│   ├── owner.js
 │   ├── ping.js
 │   ├── plugins.js
+│   ├── register.js
 │   ├── session-info.js
 │   ├── sessions.js
+│   ├── stats.js
+│   ├── tagall.js
+│   ├── welcome.js
 │   ├── session-start.js
 │   ├── session-pair.js
 │   ├── session-pause.js
@@ -276,6 +299,7 @@ OnimaiBot/
 ├── components/
 ├── config/
 ├── core/
+├── data/
 ├── docs/assets/
 ├── events/
 ├── handlers/
@@ -294,14 +318,17 @@ OnimaiBot/
 ## Wo liegt was?
 
 - `main.js` → offizieller Einstiegspunkt
-- `core/OnimaiBaseV3Bot.js` → Start, Restore, Bootstrap und Runtime
+- `core/OnimaiBaseV3Bot.js` → Start, Restore, Bootstrap und Runtime (Legacy-Dateiname aus Kompatibilitätsgründen)
 - `Onicommands/` → Commands wie bei kleinen Plugins aufgebaut
 - `Onicommands/about.js` → Projekt-Info und Branding-Beispiel
 - `Onicommands/plugins.js` → Plugin-/Modul-Übersicht als Demo
 - `Onicommands/session-info.js` → Beispiel für sessionbezogene Antworten
+- `Onicommands/register.js` + `Onicommands/me.js` → Starter-Profilsystem
+- `Onicommands/tagall.js` + `Onicommands/welcome.js` → WhatsApp-Gruppenbeispiele
 - `events/` → Listener für Nachrichten und Session-Zustände
 - `components/` → Buttons und Menülogik
 - `utils/` → Helper für WhatsApp, Multi-Session und Logging
+- `data/runtime-store.json` → wird automatisch erstellt und speichert Profile/Welcome-Status
 - `config/` → `.env`-Parsing und Laufzeitkonfiguration
 - `tests/` → schnelle Smoke-Tests
 
@@ -346,7 +373,7 @@ Aktuell prüfen die Smoke-Tests unter anderem:
 
 ### Kein QR-Code erscheint?
 
-- `ONIMAIBASEV3_DRY_RUN=false` setzen
+- `ONIMAIBOT_DRY_RUN=false` setzen
 - `WHATSAPP_PRINT_QR=true` prüfen
 - notfalls `!session-start <id>` manuell nutzen
 

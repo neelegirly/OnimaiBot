@@ -158,11 +158,17 @@ export class OnimaiBaseV3Bot {
   }
 
   async stop() {
-    this.logger.info('OnimaiBaseV3 beendet. Sessions bleiben für PM2-Warm-Restarts in der wa-api Registry erhalten.');
+    this.logger.info('OnimaiBot beendet. Sessions bleiben für PM2-Warm-Restarts in der wa-api Registry erhalten.');
   }
 }
+
+export const OnimaiBot = OnimaiBaseV3Bot;
 
 export async function createOnimaiBaseV3Bot(overrides = {}) {
   const config = createAppConfig(overrides);
   return new OnimaiBaseV3Bot(config);
+}
+
+export async function createOnimaiBot(overrides = {}) {
+  return createOnimaiBaseV3Bot(overrides);
 }

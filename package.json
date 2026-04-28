@@ -1,7 +1,7 @@
 {
-  "name": "onimaibasev3",
+  "name": "onimaibot",
   "version": "1.0.0",
-  "description": "PM2-ready Multi-Session WhatsApp Bot Base mit @neelegirly/wa-api, main.js und Onicommands.",
+  "description": "OnimaiBot: PM2-ready Multi-Session WhatsApp Bot Base mit @neelegirly/wa-api, Profiles, Welcome und Onicommands.",
   "private": true,
   "type": "module",
   "main": "main.js",
@@ -13,9 +13,9 @@
     "dev": "node --watch main.js",
     "build": "node scripts/build.js",
     "test": "node --test tests/smoke.test.js",
-    "pm2:start": "pm2 start ecosystem.config.cjs --only OnimaiBaseV3",
-    "pm2:stop": "pm2 delete OnimaiBaseV3",
-    "pm2:restart": "pm2 restart OnimaiBaseV3"
+    "pm2:start": "pm2 start ecosystem.config.cjs --only OnimaiBot",
+    "pm2:stop": "pm2 delete OnimaiBot",
+    "pm2:restart": "pm2 restart OnimaiBot"
   },
   "dependencies": {
     "@neelegirly/baileys": "2.2.18",

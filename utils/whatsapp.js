@@ -71,7 +71,7 @@ export function getChatId(message) {
 }
 
 export function getSenderId(message) {
-  return message?.key?.participant || getChatId(message);
+  return message?.key?.participant || message?.participant || getChatId(message);
 }
 
 export function getSenderName(message) {
@@ -91,6 +91,10 @@ export function isUserMessage(message) {
   }
 
   return !chatId.endsWith('@broadcast');
+}
+
+export function isGroupChat(chatId) {
+  return String(chatId || '').trim().endsWith('@g.us');
 }
 
 export function parseCommand(text, prefix) {

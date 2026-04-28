@@ -1,22 +1,23 @@
 export const DEMO_COMPONENT_IDS = {
-  hello: 'onimaibasev3:demo:hello',
-  details: 'onimaibasev3:demo:details',
-  setup: 'onimaibasev3:demo:setup'
+  hello: 'onimaibot:demo:hello',
+  details: 'onimaibot:demo:details',
+  setup: 'onimaibot:demo:setup'
 };
 
 export function createDemoMenuMessages(prefix) {
   return {
     introText: [
-      '🌸 *OnimaiBaseV3 Multi-Session Menü*',
+      '🌸 *OnimaiBot Multi-Session Menü*',
       '',
-      `Basisbefehle: *${prefix}ping*, *${prefix}about*, *${prefix}plugins*, *${prefix}session-info*`,
-      `Weitere Helfer: *${prefix}menu* und *${prefix}sessions*`,
+      `Basisbefehle: *${prefix}ping*, *${prefix}about*, *${prefix}stats*, *${prefix}plugins*`,
+      `Profile: *${prefix}register <Name>* und *${prefix}me*`,
+      `Gruppen: *${prefix}tagall* und *${prefix}welcome preview*`,
       `Lifecycle: *${prefix}session-start <id>* oder *${prefix}session-pair <id> <nummer>*`,
       'Du bekommst unten zwei Buttons, ein kleines Menü und weiter einen simplen Fallback.'
     ].join('\n'),
     buttonMessage: {
-      text: '*OnimaiBaseV3 Schnellaktionen*',
-      footer: 'OnimaiBaseV3 • wa-api Multi-Session Base',
+      text: '*OnimaiBot Schnellaktionen*',
+      footer: 'OnimaiBot • wa-api Multi-Session Base',
       buttons: [
         {
           buttonId: DEMO_COMPONENT_IDS.hello,
@@ -33,8 +34,8 @@ export function createDemoMenuMessages(prefix) {
     },
     listMessage: {
       text: 'Öffne das Mini-Menü für kurze Infos zur Multi-Session-Base.',
-      footer: 'OnimaiBaseV3 • wa-api Multi-Session Base',
-      title: 'OnimaiBaseV3 Multi-Session Menü',
+      footer: 'OnimaiBot • wa-api Multi-Session Base',
+      title: 'OnimaiBot Multi-Session Menü',
       buttonText: 'Menü öffnen',
       sections: [
         {

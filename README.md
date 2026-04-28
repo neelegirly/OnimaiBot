@@ -58,10 +58,12 @@ Kurz: **Start → Config → Session → Nachricht → Command → Antwort**.
 | --- | --- |
 | Runtime | zentrale Bot-Logik in `Onimai.js` |
 | Sessions | Start, Pairing, Pause, Resume, Stop, Delete per Command |
-| Gruppen | `tagall`, `groupinfo`, Welcome-/Goodbye-Steuerung |
+| Gruppen | `tagall`, `groupinfo`, Welcome-/Goodbye-/Kick-Steuerung |
+| Buttons | Menübuttons für `Info`, `Regeln`, `Support` direkt in `Onimai.js` |
 | User | `register`, `me`, XP/Level-Basis |
 | Owner | `owner`, `ownercontact`, `setprefix` |
 | Diagnose | `ping`, `uptime`, `stats`, `session-info` |
+| Betrieb | PM2-Ecosystem `OnimaiBaseV3` mit Logs in `./logs` |
 | Qualität | `smoke.test.js`, `node --check`, `.env.example`, `.gitignore` |
 
 ## Aktueller Stack
@@ -99,6 +101,11 @@ Wichtige Umgebungsvariablen:
 - `WA_API_BOOTSTRAP_SESSIONS`
 - `WA_API_RETRY_LIMIT`
 - `ONIMAIBOT_DRY_RUN`
+- `WELCOME_BANNER_URL` / `WELCOME_BANNER_PATH`
+- `LEAVE_BANNER_URL` / `LEAVE_BANNER_PATH`
+- `KICK_BANNER_URL` / `KICK_BANNER_PATH`
+
+Die Discord-Platzhalter `DISCORD_TOKEN`, `CLIENT_ID`, `GUILD_ID`, `WELCOME_CHANNEL_ID`, `LEAVE_CHANNEL_ID` und `KICK_LOG_CHANNEL_ID` sind in `.env.example` enthalten, damit die Datei kompatibel bleibt. Diese Base nutzt sie nicht, solange kein Discord-Client eingebaut wird.
 
 ### 3. `owner.json` prüfen
 
@@ -122,6 +129,16 @@ npm start
 ```
 
 Wenn `WHATSAPP_PRINT_QR=true` gesetzt ist und noch keine Session verbunden wurde, bekommst du den QR-Flow direkt im Terminal.
+
+### 6. Mit PM2 starten
+
+```bash
+npm run pm2:start
+npm run pm2:restart
+npm run pm2:stop
+```
+
+Die PM2-App heißt `OnimaiBaseV3`, nutzt `./Onimai.js` und schreibt Ausgaben nach `./logs`.
 
 ## Wenn du etwas ändern willst
 
@@ -150,6 +167,8 @@ Dadurch bleibt die Base verständlich, auch wenn du später mehr Features einbau
 - `!ping` – schneller Lebenszeichen-Check
 - `!uptime` – Laufzeit, Bootzeit, Counter
 - `!about` – Stack- und Projektinfo
+- `!rules` – Regeln anzeigen
+- `!support` – Supportinfos anzeigen
 - `!plugins` – eingebaute Features
 - `!stats` – Runtime-Zahlen
 - `!prefix` – aktiven Prefix anzeigen
@@ -169,6 +188,8 @@ Dadurch bleibt die Base verständlich, auch wenn du später mehr Features einbau
 - `!welcome on|off|status|preview` – Welcome-System steuern
 - `!welcome set <Text>` – eigenen Welcome-Text setzen
 - `!welcome setbye <Text>` – Goodbye-Text setzen
+- `!welcome setkick <Text>` – Kick-Text setzen
+- `!welcome reset` – Welcome-, Goodbye- und Kick-Texte zurücksetzen
 
 ### Multi-Session
 
@@ -187,7 +208,11 @@ Dadurch bleibt die Base verständlich, auch wenn du später mehr Features einbau
 
 - Einstieg von **`Mainonimai.js`** auf **`Onimai.js`** umgestellt
 - Hilfetexte und Menüs an den neuen Einstieg angepasst
-- neue eingebaute Commands: **`uptime`**, **`ownercontact`**, **`prefix`**, **`setprefix`**, **`groupinfo`**
+- neue eingebaute Commands: **`uptime`**, **`ownercontact`**, **`prefix`**, **`setprefix`**, **`groupinfo`**, **`rules`**, **`support`**
+- Welcome-System erweitert: zufällige Join-/Leave-/Kick-Sprüche, Banner aus URL oder lokaler Datei, Kick-Moderator aus WhatsApp-Stubs wenn verfügbar
+- Menübuttons direkt in `Onimai.js`: Info, Regeln, Support und Menü
+- `sendTextMessage` wurde durch `sendOnimai` ersetzt
+- PM2-Konfiguration für `OnimaiBaseV3` ergänzt
 - zentrale WhatsApp-Architektur beibehalten statt neue Extra-Ordner einzuführen
 - Tests und Scripts auf den neuen Einstieg synchronisiert
 
@@ -199,10 +224,12 @@ Kurz gesagt: weniger Chaos, mehr nutzbare Base. Der Bot hat jetzt weniger „wo 
 OnimaiBase/
 ├── Onimai.js
 ├── package.json
+├── ecosystem.config.js
 ├── smoke.test.js
 ├── owner.json
 ├── .env.example
 ├── .gitignore
+├── logs/
 ├── lib/
 └── docs/assets/
 ```
@@ -213,6 +240,7 @@ OnimaiBase/
 - `lib/` → kleine Helfer und Kompatibilitätsfunktionen
 - `owner.json` → Branding, Owner-Infos
 - `.env.example` → Startkonfiguration
+- `ecosystem.config.js` → PM2-App `OnimaiBaseV3` mit Logdateien in `./logs`
 - `smoke.test.js` → schneller Syntax-/README-/Package-Check
 
 ## Wie du die wichtigsten Sachen benutzt
@@ -232,7 +260,9 @@ Das ist praktisch, wenn du mehr als eine Nummer oder mehr als einen Einsatzzweck
 ### Welcome-System nutzen
 
 Das Welcome-System reagiert auf Gruppenereignisse von WhatsApp.
-Du kannst es aktivieren, deaktivieren, den Status prüfen und eigene Texte setzen.
+Du kannst es aktivieren, deaktivieren, den Status prüfen und eigene Texte setzen. Join/Add wird als Welcome behandelt, Leave bekommt eigene zufällige Texte und Kick nutzt eine eigene Nachricht. Wenn WhatsApp den Ausführer im Gruppen-Stub mitliefert, wird der Moderator erwähnt; einen echten Audit-Log-Grund liefert WhatsApp nicht mit.
+
+Banner funktionieren über `WELCOME_BANNER_URL`, `LEAVE_BANNER_URL`, `KICK_BANNER_URL` oder die passenden `*_BANNER_PATH`-Werte. Wenn nichts gesetzt ist, versucht die Base das lokale Hero-Bild aus `docs/assets/readme-hero.jpg`; danach fällt sie auf das Gruppenbild und zuletzt auf reinen Text zurück.
 
 ### Gruppen verwalten
 

@@ -27,11 +27,35 @@ const BOOT_AT = Date.now()
 const OWNER_FILE_PATH = path.join(__dirname, 'owner.json')
 const DB_FILE_PATH = path.join(__dirname, 'database.json')
 const PACKAGE_FILE_PATH = path.join(__dirname, 'package.json')
+const DEFAULT_EVENT_BANNER_PATH = path.join(__dirname, 'docs', 'assets', 'readme-hero.jpg')
 
 const packageMeta = JSON.parse(fs.readFileSync(PACKAGE_FILE_PATH, 'utf-8'))
 
 const DEFAULT_WELCOME_TEMPLATE = '🌸 Willkommen @user in *@subject*!\n\n📖 Beschreibung: @desc\n👥 Mitglieder: @count\n🤖 Session: @session'
 const DEFAULT_GOODBYE_TEMPLATE = '💫 Tschüss @user aus *@subject*!\n\nWir wünschen dir alles Liebe.\n👥 Restliche Mitglieder: @count\n🤖 Session: @session'
+const DEFAULT_KICK_TEMPLATE = '🚫 @user wurde von @moderator aus *@subject* entfernt.\n\n🧾 Grund: @reason\n👥 Mitglieder: @count\n🤖 Session: @session'
+
+const WELCOME_RANDOM_PHRASES = [
+  '🌸 Willkommen bei Onimai, {user}! Schön, dass du da bist.',
+  '✨ Hey {user}, mach es dir gemütlich.',
+  '🛬 Ein neues Mitglied ist gelandet: {user}',
+  '🎉 Willkommen im Server, {user}. Viel Spaß bei uns.',
+  '💜 {user} ist jetzt Teil von Onimai.'
+]
+
+const LEAVE_RANDOM_PHRASES = [
+  '👋 {user} hat den Server verlassen.',
+  '💫 Tschüss {user}, vielleicht sieht man sich wieder.',
+  '📉 Ein Mitglied weniger: {user}',
+  '🚪 {user} ist gegangen.'
+]
+
+const KICK_RANDOM_PHRASES = [
+  '🚫 {user} wurde vom Server entfernt.',
+  '🛡️ Kick ausgeführt: {user}',
+  '⚠️ {user} musste Onimai verlassen.',
+  '🔨 Moderator-Aktion: {user} wurde gekickt.'
+]
 
 const parseBoolean = (value, fallback = false) => {
   if (typeof value === 'boolean') return value
@@ -112,6 +136,7 @@ const buildDefaultDatabase = () => ({
     totalCommands: 0,
     totalWelcomes: 0,
     totalGoodbyes: 0,
+    totalKicks: 0,
     commandUsage: {}
   }
 })
@@ -223,6 +248,10 @@ const COMMAND_ALIASES = new Map([
   ['alive', 'ping'],
   ['about', 'about'],
   ['info', 'about'],
+  ['rules', 'rules'],
+  ['regeln', 'rules'],
+  ['support', 'support'],
+  ['hilfe-team', 'support'],
   ['ownercontact', 'ownercontact'],
   ['prefix', 'prefix'],
   ['setprefix', 'setprefix'],
@@ -269,6 +298,8 @@ const BUILTIN_COMMANDS = [
   'ping',
   'uptime',
   'about',
+  'rules',
+  'support',
   'ownercontact',
   'prefix',
   'setprefix',
@@ -318,6 +349,13 @@ const formatDuration = (ms = 0) => {
   if (minutes || parts.length) parts.push(`${minutes}m`)
   parts.push(`${seconds}s`)
   return parts.join(' ')
+}
+
+const pickRandom = (entries = [], fallback = '') => {
+  const source = Array.isArray(entries) ? entries.filter(Boolean) : []
+  if (!source.length) return fallback
+  const index = Math.floor(Math.random() * source.length)
+  return String(source[index] || fallback)
 }
 
 const toEpochMs = (value) => {
@@ -373,6 +411,7 @@ const ensureGroupSettings = (chatId = '') => {
     welcomeEnabled: base.welcomeEnabled || false,
     welcomeTemplate: base.welcomeTemplate || DEFAULT_WELCOME_TEMPLATE,
     goodbyeTemplate: base.goodbyeTemplate || DEFAULT_GOODBYE_TEMPLATE,
+    kickTemplate: base.kickTemplate || DEFAULT_KICK_TEMPLATE,
     createdAt: base.createdAt || Date.now(),
     updatedAt: Date.now(),
     ...base,
@@ -516,7 +555,36 @@ const resolveGroupMetadata = async (session, chatId) => {
   return null
 }
 
-const sendTextMessage = async (session, chatId, text, { quoted = null, mentions = [] } = {}) => {
+const resolveEnvPath = (value = '') => {
+  const rawPath = String(value || '').trim()
+  if (!rawPath) return ''
+  return path.isAbsolute(rawPath) ? rawPath : path.resolve(__dirname, rawPath)
+}
+
+const getEventBannerSource = (eventAction = '') => {
+  const action = String(eventAction || '').trim().toLowerCase()
+  const urlByAction = {
+    welcome: process.env.WELCOME_BANNER_URL,
+    goodbye: process.env.LEAVE_BANNER_URL,
+    kick: process.env.KICK_BANNER_URL
+  }
+  const pathByAction = {
+    welcome: process.env.WELCOME_BANNER_PATH,
+    goodbye: process.env.LEAVE_BANNER_PATH,
+    kick: process.env.KICK_BANNER_PATH
+  }
+
+  const bannerUrl = String(urlByAction[action] || '').trim()
+  if (bannerUrl) return { url: bannerUrl }
+
+  const configuredPath = resolveEnvPath(pathByAction[action])
+  const bannerPath = configuredPath || DEFAULT_EVENT_BANNER_PATH
+  if (fs.existsSync(bannerPath)) return fs.readFileSync(bannerPath)
+
+  return null
+}
+
+const sendOnimai = async (session, chatId, text, { quoted = null, mentions = [] } = {}) => {
   const payload = {
     text,
     ...(mentions.length ? { mentions } : {})
@@ -529,10 +597,10 @@ const sendMenuMessage = async (session, chatId, text, quoted = null) => {
     text,
     footer: `${runtimeConfig.appName} • WhatsApp only`,
     buttons: [
-      { buttonId: 'cmd:help', buttonText: { displayText: 'ℹ️ Hilfe' }, type: 1 },
-      { buttonId: 'cmd:me', buttonText: { displayText: '👤 Profil' }, type: 1 },
-      { buttonId: 'cmd:ping', buttonText: { displayText: '🏓 Ping' }, type: 1 },
-      { buttonId: 'cmd:sessions', buttonText: { displayText: '📡 Sessions' }, type: 1 }
+      { buttonId: 'cmd:about', buttonText: { displayText: 'ℹ️ Info' }, type: 1 },
+      { buttonId: 'cmd:rules', buttonText: { displayText: '📜 Regeln' }, type: 1 },
+      { buttonId: 'cmd:support', buttonText: { displayText: '🆘 Support' }, type: 1 },
+      { buttonId: 'cmd:menu', buttonText: { displayText: '🏠 Menü' }, type: 1 }
     ],
     headerType: 1
   }
@@ -540,7 +608,7 @@ const sendMenuMessage = async (session, chatId, text, quoted = null) => {
   try {
     return await session.sendMessage(chatId, payload, quoted ? { quoted } : undefined)
   } catch {
-    return sendTextMessage(session, chatId, text, { quoted })
+    return sendOnimai(session, chatId, text, { quoted })
   }
 }
 
@@ -557,6 +625,8 @@ const buildMenuText = (sender = '') => {
     `• \`${prefix}ping\` - Schneller Statuscheck`,
     `• \`${prefix}uptime\` - Laufzeit & Bootstatus`,
     `• \`${prefix}about\` - Stack & Projektinfo`,
+    `• \`${prefix}rules\` - Gruppen-Regeln`,
+    `• \`${prefix}support\` - Support-Infos`,
     `• \`${prefix}ownercontact\` - Owner-Kontakt`,
     `• \`${prefix}prefix\` - Aktuellen Prefix zeigen`,
     `• \`${prefix}plugins\` - Zeigt eingebaute WhatsApp-Features`,
@@ -598,6 +668,8 @@ const buildHelpText = () => {
     `• \`${prefix}ping\` → prüft ob die Base lebt`,
     `• \`${prefix}uptime\` → zeigt Uptime, Bootzeit und Counters`,
     `• \`${prefix}about\` → zeigt Stack & Branding`,
+    `• \`${prefix}rules\` → zeigt Regeln fürs Miteinander`,
+    `• \`${prefix}support\` → zeigt Kontakt & Hilfeweg`,
     `• \`${prefix}ownercontact\` → zeigt den Owner-Kontakt`,
     `• \`${prefix}prefix\` → zeigt den aktiven Prefix`,
     `• \`${prefix}plugins\` → zeigt eingebaute WhatsApp-Features`,
@@ -688,9 +760,35 @@ const buildStatsText = () => {
     `📡 Bekannte Sessions: *${getKnownSessionNames().length}*`,
     `🤝 Welcome-Events: *${global.db.data.stats.totalWelcomes}*`,
     `👋 Goodbye-Events: *${global.db.data.stats.totalGoodbyes}*`,
+    `🔨 Kick-Events: *${global.db.data.stats.totalKicks}*`,
     '',
     '*Top Commands*',
     ...(commandUsage.length ? commandUsage : ['• noch keine Commands gezählt'])
+  ].join('\n')
+}
+
+const buildRulesText = () => [
+  `📜 *${runtimeConfig.appName} Regeln*`,
+  '',
+  '1) Respektvoll bleiben – kein Drama, kein Hass, kein unnötiger Streit.',
+  '2) Kein Spam und keine Floods.',
+  '3) Keine sensiblen Daten posten (Nummern, Tokens, private Infos).',
+  '4) Moderationsentscheidungen akzeptieren.',
+  '5) Bei Problemen direkt Support nutzen.',
+  '',
+  '💜 Ziel: entspannte Community mit klaren Grenzen.'
+].join('\n')
+
+const buildSupportText = () => {
+  const ownerContact = ownerConfig.ownerContact || 'nicht gesetzt'
+  return [
+    `🆘 *${runtimeConfig.appName} Support*`,
+    '',
+    `• Owner: *${ownerConfig.ownerName}* ${ownerConfig.ownerTag}`,
+    `• Kontakt: *${ownerContact}*`,
+    `• Session: *${DEFAULT_SESSION_NAME}*`,
+    '',
+    '💡 Tipp: Beschreibe kurz *was passiert*, *seit wann* und *welcher Command* betroffen ist.'
   ].join('\n')
 }
 
@@ -761,12 +859,67 @@ const buildUnknownCommandText = (command = '') => {
 
 const formatWelcomeTemplate = ({ template = '', participant = '', subject = '', description = '', memberCount = 0, sessionId = '' }) => {
   return String(template || '')
+    .replace(/\{user\}/g, getDisplayMention(participant))
     .replace(/@user/g, getDisplayMention(participant))
+    .replace(/\{subject\}/g, subject || 'Unbekannte Gruppe')
     .replace(/@subject/g, subject || 'Unbekannte Gruppe')
+    .replace(/\{desc\}/g, description || 'Keine Beschreibung gesetzt.')
     .replace(/@desc/g, description || 'Keine Beschreibung gesetzt.')
+    .replace(/\{count\}/g, String(memberCount || 0))
     .replace(/@count/g, String(memberCount || 0))
+    .replace(/\{session\}/g, sessionId || 'unbekannt')
     .replace(/@session/g, sessionId || 'unbekannt')
+    .replace(/\{owner\}/g, ownerConfig.ownerName || 'Owner')
     .replace(/@owner/g, ownerConfig.ownerName || 'Owner')
+    .replace(/\{moderator\}/g, '@moderator')
+    .replace(/@moderator/g, '@moderator')
+    .replace(/\{reason\}/g, 'kein Grund verfügbar')
+    .replace(/@reason/g, 'kein Grund verfügbar')
+}
+
+const formatGroupActionTemplate = ({
+  template = '',
+  participant = '',
+  subject = '',
+  description = '',
+  memberCount = 0,
+  sessionId = '',
+  moderator = '',
+  reason = ''
+}) => {
+  const moderatorMention = moderator ? getDisplayMention(moderator) : 'Unbekannt'
+  const finalReason = String(reason || '').trim() || 'kein Grund verfügbar'
+  return formatWelcomeTemplate({
+    template,
+    participant,
+    subject,
+    description,
+    memberCount,
+    sessionId
+  })
+    .replace(/\{moderator\}/g, moderatorMention)
+    .replace(/@moderator/g, moderatorMention)
+    .replace(/\{reason\}/g, finalReason)
+    .replace(/@reason/g, finalReason)
+}
+
+const getRandomGroupActionTemplate = (action = '', groupConfig = {}) => {
+  if (action === 'welcome') {
+    if (groupConfig.welcomeTemplate && groupConfig.welcomeTemplate !== DEFAULT_WELCOME_TEMPLATE) return groupConfig.welcomeTemplate
+    return pickRandom(WELCOME_RANDOM_PHRASES, DEFAULT_WELCOME_TEMPLATE)
+  }
+
+  if (action === 'goodbye') {
+    if (groupConfig.goodbyeTemplate && groupConfig.goodbyeTemplate !== DEFAULT_GOODBYE_TEMPLATE) return groupConfig.goodbyeTemplate
+    return pickRandom(LEAVE_RANDOM_PHRASES, DEFAULT_GOODBYE_TEMPLATE)
+  }
+
+  if (action === 'kick') {
+    if (groupConfig.kickTemplate && groupConfig.kickTemplate !== DEFAULT_KICK_TEMPLATE) return groupConfig.kickTemplate
+    return pickRandom(KICK_RANDOM_PHRASES, DEFAULT_KICK_TEMPLATE)
+  }
+
+  return DEFAULT_GOODBYE_TEMPLATE
 }
 
 const buildWelcomeStatusText = (groupConfig, subject = '') => {
@@ -777,6 +930,7 @@ const buildWelcomeStatusText = (groupConfig, subject = '') => {
     `• Aktiv: *${groupConfig.welcomeEnabled ? 'ja' : 'nein'}*`,
     `• Join-Template: ${groupConfig.welcomeTemplate}`,
     `• Bye-Template: ${groupConfig.goodbyeTemplate}`,
+    `• Kick-Template: ${groupConfig.kickTemplate || DEFAULT_KICK_TEMPLATE}`,
     '',
     '*Verwendung*',
     `• \`${prefix}welcome on\``,
@@ -784,6 +938,7 @@ const buildWelcomeStatusText = (groupConfig, subject = '') => {
     `• \`${prefix}welcome preview\``,
     `• \`${prefix}welcome set <Text>\``,
     `• \`${prefix}welcome setbye <Text>\``,
+    `• \`${prefix}welcome setkick <Text>\``,
     `• \`${prefix}welcome reset\``
   ].join('\n')
 }
@@ -887,12 +1042,22 @@ const resolveParticipantEvent = (msg = {}, sender = '') => {
 
   const parameterMentions = normalizeMentionList(msg?.messageStubParameters || [])
   const participants = parameterMentions.length ? parameterMentions : normalizeMentionList([sender])
+  const actor = normalizeJid(msg?.key?.participant || msg?.participant || sender)
 
   if (/(GROUP_PARTICIPANT_ADD|GROUP_PARTICIPANT_INVITE|GROUP_PARTICIPANT_LINKED_GROUP_JOIN|GROUP_PARTICIPANT_JOIN_REQUEST_APPROVED)/.test(stubName)) {
-    return { action: 'welcome', participants, stubName }
+    return { action: 'welcome', participants, actor, stubName }
   }
   if (/(GROUP_PARTICIPANT_REMOVE|GROUP_PARTICIPANT_LEAVE)/.test(stubName)) {
-    return { action: 'goodbye', participants, stubName }
+    const removedParticipant = participants[0] || ''
+    const actorFromParams = normalizeJid((msg?.messageStubParameters || [])[1] || '')
+    const effectiveActor = actorFromParams || actor
+    const isKick = stubName.includes('GROUP_PARTICIPANT_REMOVE') && effectiveActor && removedParticipant && extractDigits(effectiveActor) !== extractDigits(removedParticipant)
+    return {
+      action: isKick ? 'kick' : 'goodbye',
+      participants,
+      actor: effectiveActor,
+      stubName
+    }
   }
   return null
 }
@@ -910,24 +1075,50 @@ const maybeHandleWelcomeEvent = async ({ msg, session, chatId, sender }) => {
   const subject = metadata?.subject || 'Unbekannte Gruppe'
   const description = String(metadata?.desc || '').trim() || 'Keine Beschreibung gesetzt.'
   const memberCount = Array.isArray(metadata?.participants) ? metadata.participants.length : 0
-  const template = event.action === 'welcome' ? groupConfig.welcomeTemplate : groupConfig.goodbyeTemplate
+  const bannerSource = getEventBannerSource(event.action)
+  const fallbackBannerUrl = bannerSource ? '' : await resolveProfilePicture(session, chatId)
+  const hasAuditLikeData = event.action === 'kick' && !!event.actor
+  const reasonText = hasAuditLikeData
+    ? 'WhatsApp-Stub erkannt; ein genauer Grund wurde nicht mitgeliefert.'
+    : 'kein Grund verfügbar'
 
   for (const participant of event.participants) {
-    const text = formatWelcomeTemplate({
+    const template = getRandomGroupActionTemplate(event.action, groupConfig)
+    const text = formatGroupActionTemplate({
       template,
       participant,
       subject,
       description,
       memberCount,
-      sessionId: msg.sessionId || DEFAULT_SESSION_NAME
+      sessionId: msg.sessionId || DEFAULT_SESSION_NAME,
+      moderator: event.actor,
+      reason: reasonText
     })
-    await sendTextMessage(session, chatId, text, { mentions: [participant] }).catch((error) => {
-      console.error('❌ Welcome/Goodbye konnte nicht gesendet werden:', error)
+
+    if (bannerSource || fallbackBannerUrl) {
+      try {
+        await session.sendMessage(chatId, {
+          image: bannerSource || { url: fallbackBannerUrl },
+          caption: text,
+          mentions: normalizeMentionList([participant, event.actor])
+        })
+        continue
+      } catch {
+        // Fallback auf Text-Nachricht
+      }
+    }
+
+    await sendOnimai(session, chatId, text, {
+      mentions: normalizeMentionList([participant, event.actor])
+    }).catch((error) => {
+      console.error('❌ Welcome/Leave/Kick konnte nicht gesendet werden:', error)
     })
   }
 
   if (event.action === 'welcome') {
     global.db.data.stats.totalWelcomes += event.participants.length
+  } else if (event.action === 'kick') {
+    global.db.data.stats.totalKicks += event.participants.length
   } else {
     global.db.data.stats.totalGoodbyes += event.participants.length
   }
@@ -1205,14 +1396,14 @@ onimai.onMessageReceived(async (msg) => {
 
       case 'help': {
         commandHandled = true
-        await sendTextMessage(session, chatId, buildHelpText(), { quoted: msg })
+        await sendOnimai(session, chatId, buildHelpText(), { quoted: msg })
         break
       }
 
       case 'ping': {
         commandHandled = true
         const latency = Date.now() - toEpochMs(msg.messageTimestamp)
-        await sendTextMessage(session, chatId, [
+        await sendOnimai(session, chatId, [
           '🏓 *Pong!*',
           '',
           `• Latenz: *${Math.max(0, latency)} ms*`,
@@ -1225,7 +1416,7 @@ onimai.onMessageReceived(async (msg) => {
 
       case 'uptime': {
         commandHandled = true
-        await sendTextMessage(session, chatId, [
+        await sendOnimai(session, chatId, [
           '⏱️ *Runtime-Uptime*',
           '',
           `• Uptime: *${formatDuration(Date.now() - BOOT_AT)}*`,
@@ -1239,13 +1430,25 @@ onimai.onMessageReceived(async (msg) => {
 
       case 'about': {
         commandHandled = true
-        await sendTextMessage(session, chatId, buildAboutText(), { quoted: msg })
+        await sendOnimai(session, chatId, buildAboutText(), { quoted: msg })
+        break
+      }
+
+      case 'rules': {
+        commandHandled = true
+        await sendOnimai(session, chatId, buildRulesText(), { quoted: msg })
+        break
+      }
+
+      case 'support': {
+        commandHandled = true
+        await sendOnimai(session, chatId, buildSupportText(), { quoted: msg })
         break
       }
 
       case 'ownercontact': {
         commandHandled = true
-        await sendTextMessage(session, chatId, [
+        await sendOnimai(session, chatId, [
           '📞 *Owner-Kontakt*',
           '',
           `• Name: *${ownerConfig.ownerName}* ${ownerConfig.ownerTag}`,
@@ -1259,7 +1462,7 @@ onimai.onMessageReceived(async (msg) => {
 
       case 'prefix': {
         commandHandled = true
-        await sendTextMessage(session, chatId, [
+        await sendOnimai(session, chatId, [
           '🔤 *Prefix-Info*',
           '',
           `• Aktueller Prefix: *${getCommandPrefix()}*`,
@@ -1272,32 +1475,32 @@ onimai.onMessageReceived(async (msg) => {
       case 'setprefix': {
         commandHandled = true
         if (!canManageSessions(sender)) {
-          await sendTextMessage(session, chatId, buildSessionManagementDeniedText(), { quoted: msg })
+          await sendOnimai(session, chatId, buildSessionManagementDeniedText(), { quoted: msg })
           break
         }
 
         const nextPrefix = String(args[0] || '').trim()
         if (!nextPrefix || /\s/.test(nextPrefix) || nextPrefix.length > 5) {
-          await sendTextMessage(session, chatId, '❌ Bitte gib einen Prefix ohne Leerzeichen mit maximal 5 Zeichen an.\n\nBeispiel: `!setprefix #`', { quoted: msg })
+          await sendOnimai(session, chatId, '❌ Bitte gib einen Prefix ohne Leerzeichen mit maximal 5 Zeichen an.\n\nBeispiel: `!setprefix #`', { quoted: msg })
           break
         }
 
         global.db.data.settings.prefix = nextPrefix
         runtimeConfig.botPrefix = nextPrefix
         await saveDatabase()
-        await sendTextMessage(session, chatId, `✅ Prefix geändert auf *${nextPrefix}*\n\nTeste direkt mit \`${nextPrefix}menu\`.`, { quoted: msg })
+        await sendOnimai(session, chatId, `✅ Prefix geändert auf *${nextPrefix}*\n\nTeste direkt mit \`${nextPrefix}menu\`.`, { quoted: msg })
         break
       }
 
       case 'plugins': {
         commandHandled = true
-        await sendTextMessage(session, chatId, buildPluginsText(), { quoted: msg })
+        await sendOnimai(session, chatId, buildPluginsText(), { quoted: msg })
         break
       }
 
       case 'stats': {
         commandHandled = true
-        await sendTextMessage(session, chatId, buildStatsText(), { quoted: msg })
+        await sendOnimai(session, chatId, buildStatsText(), { quoted: msg })
         break
       }
 
@@ -1309,7 +1512,7 @@ onimai.onMessageReceived(async (msg) => {
         user.registeredAt = Date.now()
         user.pushName = pushName || user.pushName || null
         await saveDatabase()
-        await sendTextMessage(session, chatId, [
+        await sendOnimai(session, chatId, [
           '✅ *Registrierung erfolgreich!*',
           '',
           `🌸 Name: *${user.name}*`,
@@ -1351,31 +1554,31 @@ onimai.onMessageReceived(async (msg) => {
           }
         }
 
-        await sendTextMessage(session, chatId, profileText, { quoted: msg })
+        await sendOnimai(session, chatId, profileText, { quoted: msg })
         break
       }
 
       case 'owner': {
         commandHandled = true
         if (!isOwner(sender)) {
-          await sendTextMessage(session, chatId, buildSessionManagementDeniedText(), { quoted: msg })
+          await sendOnimai(session, chatId, buildSessionManagementDeniedText(), { quoted: msg })
           break
         }
-        await sendTextMessage(session, chatId, buildOwnerText(), { quoted: msg })
+        await sendOnimai(session, chatId, buildOwnerText(), { quoted: msg })
         break
       }
 
       case 'tagall': {
         commandHandled = true
         if (!chatId.endsWith('@g.us')) {
-          await sendTextMessage(session, chatId, '❌ `tagall` funktioniert nur in Gruppen.', { quoted: msg })
+          await sendOnimai(session, chatId, '❌ `tagall` funktioniert nur in Gruppen.', { quoted: msg })
           break
         }
 
         const metadata = await resolveGroupMetadata(session, chatId)
         const participantIds = normalizeMentionList(metadata?.participants || [])
         if (!participantIds.length) {
-          await sendTextMessage(session, chatId, '❌ Gruppenmitglieder konnten nicht geladen werden.', { quoted: msg })
+          await sendOnimai(session, chatId, '❌ Gruppenmitglieder konnten nicht geladen werden.', { quoted: msg })
           break
         }
 
@@ -1390,13 +1593,13 @@ onimai.onMessageReceived(async (msg) => {
       case 'groupinfo': {
         commandHandled = true
         if (!chatId.endsWith('@g.us')) {
-          await sendTextMessage(session, chatId, '❌ `groupinfo` funktioniert nur in Gruppen.', { quoted: msg })
+          await sendOnimai(session, chatId, '❌ `groupinfo` funktioniert nur in Gruppen.', { quoted: msg })
           break
         }
 
         const metadata = await resolveGroupMetadata(session, chatId)
         if (!metadata) {
-          await sendTextMessage(session, chatId, '❌ Gruppeninfos konnten nicht geladen werden.', { quoted: msg })
+          await sendOnimai(session, chatId, '❌ Gruppeninfos konnten nicht geladen werden.', { quoted: msg })
           break
         }
 
@@ -1424,14 +1627,14 @@ onimai.onMessageReceived(async (msg) => {
           }
         }
 
-        await sendTextMessage(session, chatId, groupCaption, { quoted: msg })
+        await sendOnimai(session, chatId, groupCaption, { quoted: msg })
         break
       }
 
       case 'welcome': {
         commandHandled = true
         if (!chatId.endsWith('@g.us')) {
-          await sendTextMessage(session, chatId, '❌ `welcome` ist nur in Gruppen sinnvoll.', { quoted: msg })
+          await sendOnimai(session, chatId, '❌ `welcome` ist nur in Gruppen sinnvoll.', { quoted: msg })
           break
         }
 
@@ -1445,7 +1648,7 @@ onimai.onMessageReceived(async (msg) => {
           groupConfig.welcomeEnabled = true
           groupConfig.updatedAt = Date.now()
           await saveDatabase()
-          await sendTextMessage(session, chatId, `✅ Welcome-System für *${subject}* aktiviert.`, { quoted: msg })
+          await sendOnimai(session, chatId, `✅ Welcome-System für *${subject}* aktiviert.`, { quoted: msg })
           break
         }
 
@@ -1453,40 +1656,53 @@ onimai.onMessageReceived(async (msg) => {
           groupConfig.welcomeEnabled = false
           groupConfig.updatedAt = Date.now()
           await saveDatabase()
-          await sendTextMessage(session, chatId, `✅ Welcome-System für *${subject}* deaktiviert.`, { quoted: msg })
+          await sendOnimai(session, chatId, `✅ Welcome-System für *${subject}* deaktiviert.`, { quoted: msg })
           break
         }
 
         if (subCommand === 'set') {
           if (!restText) {
-            await sendTextMessage(session, chatId, '❌ Bitte gib nach `welcome set` einen Text an.', { quoted: msg })
+            await sendOnimai(session, chatId, '❌ Bitte gib nach `welcome set` einen Text an.', { quoted: msg })
             break
           }
           groupConfig.welcomeTemplate = restText
           groupConfig.updatedAt = Date.now()
           await saveDatabase()
-          await sendTextMessage(session, chatId, '✅ Welcome-Template gespeichert.', { quoted: msg })
+          await sendOnimai(session, chatId, '✅ Welcome-Template gespeichert.', { quoted: msg })
           break
         }
 
         if (subCommand === 'setbye') {
           if (!restText) {
-            await sendTextMessage(session, chatId, '❌ Bitte gib nach `welcome setbye` einen Text an.', { quoted: msg })
+            await sendOnimai(session, chatId, '❌ Bitte gib nach `welcome setbye` einen Text an.', { quoted: msg })
             break
           }
           groupConfig.goodbyeTemplate = restText
           groupConfig.updatedAt = Date.now()
           await saveDatabase()
-          await sendTextMessage(session, chatId, '✅ Goodbye-Template gespeichert.', { quoted: msg })
+          await sendOnimai(session, chatId, '✅ Goodbye-Template gespeichert.', { quoted: msg })
+          break
+        }
+
+        if (subCommand === 'setkick') {
+          if (!restText) {
+            await sendOnimai(session, chatId, '❌ Bitte gib nach `welcome setkick` einen Text an.', { quoted: msg })
+            break
+          }
+          groupConfig.kickTemplate = restText
+          groupConfig.updatedAt = Date.now()
+          await saveDatabase()
+          await sendOnimai(session, chatId, '✅ Kick-Template gespeichert.', { quoted: msg })
           break
         }
 
         if (subCommand === 'reset') {
           groupConfig.welcomeTemplate = DEFAULT_WELCOME_TEMPLATE
           groupConfig.goodbyeTemplate = DEFAULT_GOODBYE_TEMPLATE
+          groupConfig.kickTemplate = DEFAULT_KICK_TEMPLATE
           groupConfig.updatedAt = Date.now()
           await saveDatabase()
-          await sendTextMessage(session, chatId, '♻️ Welcome- und Goodbye-Templates wurden zurückgesetzt.', { quoted: msg })
+          await sendOnimai(session, chatId, '♻️ Welcome-, Goodbye- und Kick-Templates wurden zurückgesetzt.', { quoted: msg })
           break
         }
 
@@ -1501,41 +1717,41 @@ onimai.onMessageReceived(async (msg) => {
             memberCount,
             sessionId
           })
-          await sendTextMessage(session, chatId, previewText, { quoted: msg, mentions: [participant] })
+          await sendOnimai(session, chatId, previewText, { quoted: msg, mentions: [participant] })
           break
         }
 
-        await sendTextMessage(session, chatId, buildWelcomeStatusText(groupConfig, subject), { quoted: msg })
+        await sendOnimai(session, chatId, buildWelcomeStatusText(groupConfig, subject), { quoted: msg })
         break
       }
 
       case 'session-info': {
         commandHandled = true
-        await sendTextMessage(session, chatId, buildSessionInfoText(sessionId, session, sender, chatId), { quoted: msg })
+        await sendOnimai(session, chatId, buildSessionInfoText(sessionId, session, sender, chatId), { quoted: msg })
         break
       }
 
       case 'sessions': {
         commandHandled = true
-        await sendTextMessage(session, chatId, buildSessionsText(sessionId), { quoted: msg })
+        await sendOnimai(session, chatId, buildSessionsText(sessionId), { quoted: msg })
         break
       }
 
       case 'session-start': {
         commandHandled = true
         if (!canManageSessions(sender)) {
-          await sendTextMessage(session, chatId, buildSessionManagementDeniedText(), { quoted: msg })
+          await sendOnimai(session, chatId, buildSessionManagementDeniedText(), { quoted: msg })
           break
         }
 
         const target = normalizeSessionName(args[0] || sessionId || runtimeConfig.bootstrapSessions[0] || DEFAULT_SESSION_NAME)
         try {
           await startSessionByQr(target)
-          await sendTextMessage(session, chatId, `✅ Session *${target}* wurde per QR-Flow gestartet.`, { quoted: msg })
+          await sendOnimai(session, chatId, `✅ Session *${target}* wurde per QR-Flow gestartet.`, { quoted: msg })
         } catch (error) {
           rememberSession(target, { state: 'offline', lastError: error.message, desiredState: 'running' })
           await saveDatabase()
-          await sendTextMessage(session, chatId, `❌ Session *${target}* konnte nicht gestartet werden:\n${error.message}`, { quoted: msg })
+          await sendOnimai(session, chatId, `❌ Session *${target}* konnte nicht gestartet werden:\n${error.message}`, { quoted: msg })
         }
         break
       }
@@ -1543,11 +1759,11 @@ onimai.onMessageReceived(async (msg) => {
       case 'session-pair': {
         commandHandled = true
         if (!canManageSessions(sender)) {
-          await sendTextMessage(session, chatId, buildSessionManagementDeniedText(), { quoted: msg })
+          await sendOnimai(session, chatId, buildSessionManagementDeniedText(), { quoted: msg })
           break
         }
         if (typeof onimai.startSessionWithPairingCode !== 'function') {
-          await sendTextMessage(session, chatId, '❌ Deine wa-api unterstützt aktuell keinen Pairing-Code-Start.', { quoted: msg })
+          await sendOnimai(session, chatId, '❌ Deine wa-api unterstützt aktuell keinen Pairing-Code-Start.', { quoted: msg })
           break
         }
 
@@ -1557,11 +1773,11 @@ onimai.onMessageReceived(async (msg) => {
 
         try {
           await startSessionByPairing(target, maybePhone)
-          await sendTextMessage(session, chatId, `✅ Pairing für Session *${target}* wurde gestartet.\n\nNutze eine vollständige Nummer wie \`491234567890\`.`, { quoted: msg })
+          await sendOnimai(session, chatId, `✅ Pairing für Session *${target}* wurde gestartet.\n\nNutze eine vollständige Nummer wie \`491234567890\`.`, { quoted: msg })
         } catch (error) {
           rememberSession(target, { state: 'offline', lastError: error.message, desiredState: 'running' })
           await saveDatabase()
-          await sendTextMessage(session, chatId, `❌ Pairing für *${target}* fehlgeschlagen:\n${error.message}`, { quoted: msg })
+          await sendOnimai(session, chatId, `❌ Pairing für *${target}* fehlgeschlagen:\n${error.message}`, { quoted: msg })
         }
         break
       }
@@ -1569,16 +1785,16 @@ onimai.onMessageReceived(async (msg) => {
       case 'session-pause': {
         commandHandled = true
         if (!canManageSessions(sender)) {
-          await sendTextMessage(session, chatId, buildSessionManagementDeniedText(), { quoted: msg })
+          await sendOnimai(session, chatId, buildSessionManagementDeniedText(), { quoted: msg })
           break
         }
 
         const target = normalizeSessionName(args[0] || sessionId)
         try {
           await pauseKnownSession(target)
-          await sendTextMessage(session, chatId, `⏸️ Session *${target}* wurde pausiert.`, { quoted: msg })
+          await sendOnimai(session, chatId, `⏸️ Session *${target}* wurde pausiert.`, { quoted: msg })
         } catch (error) {
-          await sendTextMessage(session, chatId, `❌ Pause für *${target || 'unbekannt'}* fehlgeschlagen:\n${error.message}`, { quoted: msg })
+          await sendOnimai(session, chatId, `❌ Pause für *${target || 'unbekannt'}* fehlgeschlagen:\n${error.message}`, { quoted: msg })
         }
         break
       }
@@ -1586,16 +1802,16 @@ onimai.onMessageReceived(async (msg) => {
       case 'session-resume': {
         commandHandled = true
         if (!canManageSessions(sender)) {
-          await sendTextMessage(session, chatId, buildSessionManagementDeniedText(), { quoted: msg })
+          await sendOnimai(session, chatId, buildSessionManagementDeniedText(), { quoted: msg })
           break
         }
 
         const target = normalizeSessionName(args[0] || sessionId)
         try {
           await resumeKnownSession(target)
-          await sendTextMessage(session, chatId, `▶️ Session *${target}* wurde fortgesetzt.`, { quoted: msg })
+          await sendOnimai(session, chatId, `▶️ Session *${target}* wurde fortgesetzt.`, { quoted: msg })
         } catch (error) {
-          await sendTextMessage(session, chatId, `❌ Resume für *${target || 'unbekannt'}* fehlgeschlagen:\n${error.message}`, { quoted: msg })
+          await sendOnimai(session, chatId, `❌ Resume für *${target || 'unbekannt'}* fehlgeschlagen:\n${error.message}`, { quoted: msg })
         }
         break
       }
@@ -1603,16 +1819,16 @@ onimai.onMessageReceived(async (msg) => {
       case 'session-stop': {
         commandHandled = true
         if (!canManageSessions(sender)) {
-          await sendTextMessage(session, chatId, buildSessionManagementDeniedText(), { quoted: msg })
+          await sendOnimai(session, chatId, buildSessionManagementDeniedText(), { quoted: msg })
           break
         }
 
         const target = normalizeSessionName(args[0] || sessionId)
         try {
           await stopKnownSession(target)
-          await sendTextMessage(session, chatId, `⏹️ Session *${target}* wurde gestoppt.`, { quoted: msg })
+          await sendOnimai(session, chatId, `⏹️ Session *${target}* wurde gestoppt.`, { quoted: msg })
         } catch (error) {
-          await sendTextMessage(session, chatId, `❌ Stop für *${target || 'unbekannt'}* fehlgeschlagen:\n${error.message}`, { quoted: msg })
+          await sendOnimai(session, chatId, `❌ Stop für *${target || 'unbekannt'}* fehlgeschlagen:\n${error.message}`, { quoted: msg })
         }
         break
       }
@@ -1620,22 +1836,22 @@ onimai.onMessageReceived(async (msg) => {
       case 'session-delete': {
         commandHandled = true
         if (!canManageSessions(sender)) {
-          await sendTextMessage(session, chatId, buildSessionManagementDeniedText(), { quoted: msg })
+          await sendOnimai(session, chatId, buildSessionManagementDeniedText(), { quoted: msg })
           break
         }
 
         const target = normalizeSessionName(args[0] || sessionId)
         try {
           await deleteKnownSession(target)
-          await sendTextMessage(session, chatId, `🗑️ Session *${target}* wurde aus der Registry entfernt.`, { quoted: msg })
+          await sendOnimai(session, chatId, `🗑️ Session *${target}* wurde aus der Registry entfernt.`, { quoted: msg })
         } catch (error) {
-          await sendTextMessage(session, chatId, `❌ Delete für *${target || 'unbekannt'}* fehlgeschlagen:\n${error.message}`, { quoted: msg })
+          await sendOnimai(session, chatId, `❌ Delete für *${target || 'unbekannt'}* fehlgeschlagen:\n${error.message}`, { quoted: msg })
         }
         break
       }
 
       default: {
-        await sendTextMessage(session, chatId, buildUnknownCommandText(command || rawCommand), { quoted: msg })
+        await sendOnimai(session, chatId, buildUnknownCommandText(command || rawCommand), { quoted: msg })
       }
     }
 
@@ -1646,7 +1862,7 @@ onimai.onMessageReceived(async (msg) => {
       await saveDatabase()
 
       if (leveledUp) {
-        await sendTextMessage(session, chatId, `🎉 ${getDisplayMention(sender)} ist jetzt *Level ${level}*!`, {
+        await sendOnimai(session, chatId, `🎉 ${getDisplayMention(sender)} ist jetzt *Level ${level}*!`, {
           quoted: msg,
           mentions: [sender]
         }).catch(() => {})

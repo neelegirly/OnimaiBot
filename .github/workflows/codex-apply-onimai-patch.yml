@@ -1,0 +1,32 @@
+name: Apply Codex Onimai Patch
+
+on:
+  push:
+    branches:
+      - codex/onimaibasev3-welcome-pm2
+    paths:
+      - ".github/codex/onimai-large.patch.b64.*"
+      - ".github/workflows/codex-apply-onimai-patch.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/onimaibasev3-welcome-pm2
+      - name: Apply large Onimai patch
+        run: |
+          set -euo pipefail
+          cat .github/codex/onimai-large.patch.b64.* | tr -d '\n' | base64 -d > /tmp/onimai-large.patch
+          git apply /tmp/onimai-large.patch
+          rm -rf .github/codex
+          rm -f .github/workflows/codex-apply-onimai-patch.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Onimai.js package-lock.json .github
+          git commit -m "Apply OnimaiBaseV3 welcome PM2 patch"
+          git push

@@ -1,5 +1,5 @@
 {
-  "name": "onimaibase-whatsapp",
+  "name": "onimaibasev3",
   "version": "2.0.0",
   "description": "OnimaiBase WhatsApp Multi-Session Base mit aktuellem @neelegirly-Stack, Welcome-System, Owner-/Session-Commands und zentraler Onimai.js-Logik.",
   "private": true,
@@ -10,9 +10,9 @@
     "dev": "node --watch Onimai.js",
     "build": "node --check Onimai.js",
     "test": "node --test smoke.test.js",
-    "pm2:start": "pm2 start Onimai.js --name OnimaiBase",
-    "pm2:restart": "pm2 restart OnimaiBase",
-    "pm2:stop": "pm2 delete OnimaiBase"
+    "pm2:start": "pm2 start ecosystem.config.js --only OnimaiBaseV3",
+    "pm2:restart": "pm2 restart OnimaiBaseV3",
+    "pm2:stop": "pm2 delete OnimaiBaseV3"
   },
   "keywords": [
     "Onimai",
@@ -34,7 +34,8 @@
     "chalk": "^5.4.1",
     "dotenv": "^17.2.3",
     "lowdb": "^7.0.1",
-    "pm2": "^6.0.8"
+    "pm2": "^6.0.8",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
